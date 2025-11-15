@@ -1,4 +1,5 @@
 from langgraph.graph import StateGraph, START, END
+from get_graph import get_graph
 
 graph = StateGraph(dict)
 
@@ -20,7 +21,11 @@ graph.add_edge(START, "step1")  # START -> step1
 graph.add_edge("step1", "step2")  # step1 -> step2
 graph.add_edge("step2", END)  # step2 -> END
 
-app = graph.compile()
-nx_graph = app.get_graph()
 
-print(nx_graph)
+def build():
+    sg = graph.compile()
+    get_graph(sg)  # this CANNOT be raw, ie; like the code above, in "script" form
+
+
+if __name__ == "__main__":
+    build()
