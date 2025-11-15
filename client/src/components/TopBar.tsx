@@ -6,15 +6,6 @@ export default function TopBar() {
           <span>▶</span>
           Run
         </button>
-        <button className="bg-gray-600 hover:bg-gray-700 text-white px-5 py-1.5 rounded-md text-sm font-medium transition-colors">
-          Clear
-        </button>
-        <button className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-1.5 rounded-md text-sm font-medium transition-colors">
-          Save
-        </button>
-        <button className="bg-orange-600 hover:bg-orange-700 text-white px-5 py-1.5 rounded-md text-sm font-medium transition-colors">
-          Export
-        </button>
       </div>
     </div>
   );
