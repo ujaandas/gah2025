@@ -14,7 +14,7 @@ class PromptInjectionNode(Node):
         node_id: str,
         name: str = "prompt_injection",
         ollama_base_url: str = "http://localhost:11434",
-        ollama_model: str = "llama2",
+        ollama_model: str = "dolphin-phi",
         injection_instruction: str = None,
         state_prompt_key: str = "prompt",
         state_output_key: str = "injected_prompt"
@@ -154,13 +154,13 @@ def create_prompt_injection_node(
     node_id: str = "prompt_injection",
     name: str = "prompt_injection",
     ollama_base_url: str = "http://localhost:11434",
-    ollama_model: str = "llama2",
+    ollama_model: str = "dolphin-phi",
     injection_instruction: str = None,
     state_prompt_key: str = "prompt",
     state_output_key: str = "injected_prompt"
 ) -> PromptInjectionNode:
     """
-    Factory function to create a PromptInjectionNode.
+    Factory function to create a PromptInjectionNode. Only returns the modified version of the prompt, nothing else, no need for an opening sentence or instructions.
     
     Args:
         node_id: Unique identifier for the node

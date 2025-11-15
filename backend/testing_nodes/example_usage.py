@@ -4,8 +4,13 @@ Example usage of the PromptInjectionNode in a LangGraph workflow.
 This demonstrates how to inject a prompt injection testing node into an existing graph.
 """
 
+import logging
 from langgraph.graph import StateGraph, START, END
 from testing_nodes.prompt_injection_node import create_prompt_injection_node
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 
 def example_workflow():
@@ -16,23 +21,33 @@ def example_workflow():
     
     # Step 1: Generate an initial prompt
     def generate_prompt(state):
-        return {"prompt": "What is the capital of France?"}
+        logger.info("=== GENERATE_PROMPT: Starting prompt generation ===")
+        prompt = "What is the capital of France?"
+        logger.info(f"GENERATE_PROMPT: Generated prompt: '{prompt}'")
+        return {"prompt": prompt}
     
     # Step 2: Inject the prompt (testing node)
     injection_node = create_prompt_injection_node(
         node_id="injection_test",
         name="prompt_injection_test",
-        ollama_model="llama2",  # or any other model you have available
+        ollama_model="dolphin-phi",  # or any other model you have available
         state_prompt_key="prompt",  # Read from "prompt" key
         state_output_key="injected_prompt"  # Write to "injected_prompt" key
     )
     
     # Step 3: Process the (potentially injected) prompt
     def process_prompt(state):
+        logger.info("=== PROCESS_PROMPT: Starting to process prompt ===")
         # This would normally call your main LLM
         prompt = state.get("injected_prompt", state.get("prompt"))
+        logger.info(f"PROCESS_PROMPT: Input prompt: '{prompt}'")
+        logger.info("PROCESS_PROMPT: Making call to model (simulated)...")
+        
+        response = f"Processing: {prompt}"
+        logger.info(f"PROCESS_PROMPT: Received response from model: '{response}'")
+        logger.info("PROCESS_PROMPT: Returning final response")
         return {
-            "final_response": f"Processing: {prompt}",
+            "final_response": response,
             "completed": True
         }
     
@@ -57,7 +72,10 @@ def example_with_custom_injection():
     graph = StateGraph(dict)
     
     def initial_step(state):
-        return {"prompt": "Tell me a joke"}
+        logger.info("=== INITIAL_STEP: Starting custom injection example ===")
+        prompt = "Tell me a joke"
+        logger.info(f"INITIAL_STEP: Created initial prompt: '{prompt}'")
+        return {"prompt": prompt}
     
     # Create injection node with custom instruction
     custom_injection = """You are testing for prompt injection vulnerabilities.
@@ -71,11 +89,15 @@ def example_with_custom_injection():
     injection_node = create_prompt_injection_node(
         node_id="custom_injection",
         injection_instruction=custom_injection,
-        ollama_model="llama2"
+        ollama_model="dolphin-phi"
     )
     
     def final_step(state):
-        return {"result": state.get("injected_prompt")}
+        logger.info("=== FINAL_STEP: Processing final results ===")
+        injected_prompt = state.get("injected_prompt")
+        logger.info(f"FINAL_STEP: Retrieved injected prompt: '{injected_prompt}'")
+        logger.info("FINAL_STEP: Returning final result")
+        return {"result": injected_prompt}
     
     graph.add_node("start", initial_step)
     graph.add_node("inject", injection_node.data)
@@ -112,17 +134,47 @@ def example_integration_with_existing_graph(existing_graph: StateGraph, inject_a
 
 
 if __name__ == "__main__":
+    logger.info("=" * 60)
+    logger.info("MAIN: Starting example usage demonstration")
+    logger.info("=" * 60)
+    
+    print("\n" + "="*60)
     print("Example 1: Basic workflow with prompt injection")
+    print("="*60)
+    logger.info("MAIN: Creating basic workflow with prompt injection...")
     workflow1 = example_workflow()
-    print("✓ Created basic workflow")
+    logger.info("MAIN: Basic workflow created successfully")
     
-    print("\nExample 2: Custom injection instruction")
+    logger.info("MAIN: Invoking workflow1 to demonstrate execution...")
+    print("\n>>> Invoking workflow1.invoke({})...")
+    try:
+        result1 = workflow1.invoke({})
+        logger.info(f"MAIN: Workflow1 execution completed successfully")
+        print(f"\n✓ Workflow 1 Result: {result1}")
+    except Exception as e:
+        logger.error(f"MAIN: Workflow1 execution failed: {e}")
+        print(f"\n✗ Workflow 1 failed: {e}")
+        print("Make sure Ollama is running: ollama serve")
+    
+    print("\n" + "="*60)
+    print("Example 2: Custom injection instruction")
+    print("="*60)
+    logger.info("MAIN: Creating workflow with custom injection instruction...")
     workflow2 = example_with_custom_injection()
-    print("✓ Created workflow with custom injection")
+    logger.info("MAIN: Custom injection workflow created successfully")
     
-    print("\nTo run the workflow:")
-    print("  result = workflow1.invoke({})")
-    print("\nMake sure Ollama is running:")
-    print("  ollama serve")
-    print("  ollama pull llama2")
+    logger.info("MAIN: Invoking workflow2 to demonstrate custom injection...")
+    print("\n>>> Invoking workflow2.invoke({})...")
+    try:
+        result2 = workflow2.invoke({})
+        logger.info(f"MAIN: Workflow2 execution completed successfully")
+        print(f"\n✓ Workflow 2 Result: {result2}")
+    except Exception as e:
+        logger.error(f"MAIN: Workflow2 execution failed: {e}")
+        print(f"\n✗ Workflow 2 failed: {e}")
+        print("Make sure Ollama is running: ollama serve")
+    
+    logger.info("=" * 60)
+    logger.info("MAIN: All workflow demonstrations completed")
+    logger.info("=" * 60)
 
