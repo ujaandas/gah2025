@@ -1,12 +1,13 @@
 from typing import Dict, List, Any, Set
 import uuid
 from langchain_core.runnables.graph import Graph as LangChainGraph
+from graph_helper import LangGraphCtxHelper
 
-from models.node import Node
-from models.edge import Edge
+from node import Node
+from edge import Edge
 
 
-class Graph:
+class CallableGraph(LangGraphCtxHelper):
     """
     Represents a workflow graph created FROM the user's LangGraph object.
     """
