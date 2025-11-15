@@ -16,6 +16,7 @@ import 'reactflow/dist/style.css';
 
 import NodeDirectory from '@/components/NodeDirectory';
 import TopBar from '@/components/TopBar';
+import LogPanel from '@/components/LogPanel';
 
 // LangGraph Structure - Supervisor Pattern
 const initialNodes: Node[] = [
@@ -249,6 +250,7 @@ const initialEdges: Edge[] = [
 
 export default function Home() {
   const [isDirectoryOpen, setIsDirectoryOpen] = useState(false);
+  const [isLogPanelOpen, setIsLogPanelOpen] = useState(false);
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
@@ -321,6 +323,12 @@ export default function Home() {
         isOpen={isDirectoryOpen}
         onClose={() => setIsDirectoryOpen(false)}
         onNodeAdd={handleNodeAdd}
+      />
+
+      {/* Log Panel */}
+      <LogPanel
+        isOpen={isLogPanelOpen}
+        onToggle={() => setIsLogPanelOpen(!isLogPanelOpen)}
       />
     </div>
   );

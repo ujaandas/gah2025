@@ -11,7 +11,7 @@ const ibmPlexSans = IBM_Plex_Sans({
 export const metadata: Metadata = {
   title: "Gah2025",
   description: "Great Agent Hack 2025",
-};
+}
 
 export default function RootLayout({
   children,
