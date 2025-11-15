@@ -5,14 +5,13 @@ import importlib.util
 from langgraph.graph.state import CompiledStateGraph
 from langchain_core.runnables.graph import Graph as LangChainGraph
 from types import ModuleType
-from models.graph import Graph
 
 
-class CallableGraphHelper:
+class LangGraphCtxHelper:
     def __init__(self, compiled_graph: CompiledStateGraph):
         self.filepath: str = None  # fully resolved filepath
         self.module_name: str = None  # module name (ie; filename w/o extension)
-        self.graph: LangChainGraph = None  # langgraph graph
+        self.lc_graph: LangChainGraph = None  # langgraph graph
         self.module: ModuleType = None  # module
 
         self.load_module()
@@ -21,7 +20,8 @@ class CallableGraphHelper:
     def get_filepath(self) -> None:
         """Inspect call stack for full path of call location."""
         stack = inspect.stack()
-        ctx = next(ctx for ctx in stack if ctx.filename != __file__)
+        # deepest frame is the last one
+        ctx = stack[-1]
         self.filepath = ctx.filename
         self.module_name = os.path.basename(self.filepath).removesuffix(".py")
 
@@ -37,13 +37,4 @@ class CallableGraphHelper:
 
     def extract_graph(self, compiled_graph: CompiledStateGraph) -> None:
         """Call LangGraph get_graph method."""
-        self.graph = compiled_graph.get_graph()
-
-
-def build_callable_graph(compiled_graph: CompiledStateGraph) -> None:
-    helper = CallableGraphHelper(compiled_graph)
-    print(helper.graph)
-    graph = Graph(helper.graph)
-    print(f"{graph.to_dict()}\n\n")
-    print(graph.nodes)
-    print(graph.edges)
+        self.lc_graph = compiled_graph.get_graph()

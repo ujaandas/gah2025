@@ -1,6 +1,6 @@
 from langgraph.graph import StateGraph, START, END
 
-from graph_helper import build_callable_graph
+from lantern import build_callable_graph
 # from get_graph import get_graph
 
 graph = StateGraph(dict)
