@@ -55,8 +55,8 @@ const initialNodes: Node[] = [
       )
     },
     style: {
-      background: '#dbeafe',
-      border: '3px solid #3b82f6',
+      background: '#f3e8ff',
+      border: '3px solid #A929EE',
       borderRadius: '12px',
       padding: '15px',
       minWidth: '150px'
@@ -176,7 +176,7 @@ const initialEdges: Edge[] = [
     source: 'supervisor',
     target: 'Excel',
     animated: true,
-    style: { stroke: '#3b82f6', strokeWidth: 2, strokeDasharray: '5,5' },
+    style: { stroke: '#A929EE', strokeWidth: 2, strokeDasharray: '5,5' },
     label: 'route'
   },
   {
@@ -184,7 +184,7 @@ const initialEdges: Edge[] = [
     source: 'supervisor',
     target: 'PowerPoint',
     animated: true,
-    style: { stroke: '#3b82f6', strokeWidth: 2, strokeDasharray: '5,5' },
+    style: { stroke: '#A929EE', strokeWidth: 2, strokeDasharray: '5,5' },
     label: 'route'
   },
   {
@@ -192,7 +192,7 @@ const initialEdges: Edge[] = [
     source: 'supervisor',
     target: 'Browser',
     animated: true,
-    style: { stroke: '#3b82f6', strokeWidth: 2, strokeDasharray: '5,5' },
+    style: { stroke: '#A929EE', strokeWidth: 2, strokeDasharray: '5,5' },
     label: 'route'
   },
   {
@@ -200,7 +200,7 @@ const initialEdges: Edge[] = [
     source: 'supervisor',
     target: 'Research',
     animated: true,
-    style: { stroke: '#3b82f6', strokeWidth: 2, strokeDasharray: '5,5' },
+    style: { stroke: '#A929EE', strokeWidth: 2, strokeDasharray: '5,5' },
     label: 'route'
   },
   {
@@ -208,7 +208,7 @@ const initialEdges: Edge[] = [
     source: 'supervisor',
     target: '__end__',
     animated: true,
-    style: { stroke: '#3b82f6', strokeWidth: 2, strokeDasharray: '5,5' },
+    style: { stroke: '#A929EE', strokeWidth: 2, strokeDasharray: '5,5' },
     label: 'finish'
   },
   // Agents back to Supervisor (non-conditional - solid lines)
@@ -310,7 +310,10 @@ export default function Home() {
       {/* Floating Add Node Button */}
       <button
         onClick={() => setIsDirectoryOpen(true)}
-        className="fixed top-24 left-8 bg-blue-600 hover:bg-blue-700 text-white w-12 h-12 rounded-full shadow-lg hover:shadow-xl transition-all font-medium flex items-center justify-center z-[1000]"
+        className="fixed top-24 left-8 text-white w-12 h-12 rounded-full shadow-lg hover:shadow-xl transition-all font-medium flex items-center justify-center z-[1000]"
+        style={{ background: '#A929EE' }}
+        onMouseEnter={(e) => e.currentTarget.style.background = '#8B1FCC'}
+        onMouseLeave={(e) => e.currentTarget.style.background = '#A929EE'}
       >
         <span className="text-2xl">+</span>
       </button>

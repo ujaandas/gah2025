@@ -51,7 +51,7 @@ export default function NodeDirectory({ isOpen, onClose, onNodeAdd }: NodeDirect
       description: 'Manage data in Airtable bases',
       icon: '🔷',
       badge: 'MCP',
-      badgeColor: 'bg-blue-200 text-blue-700'
+      badgeColor: 'bg-purple-200 text-purple-700'
     },
     {
       id: 'gmail',
@@ -75,7 +75,7 @@ export default function NodeDirectory({ isOpen, onClose, onNodeAdd }: NodeDirect
       description: 'Manage files in Google Drive',
       icon: '📁',
       badge: 'MCP',
-      badgeColor: 'bg-blue-200 text-blue-700'
+      badgeColor: 'bg-purple-200 text-purple-700'
     },
     {
       id: 'google-calendar',
@@ -83,7 +83,7 @@ export default function NodeDirectory({ isOpen, onClose, onNodeAdd }: NodeDirect
       description: 'Manage Google Calendar events',
       icon: '📅',
       badge: 'MCP',
-      badgeColor: 'bg-blue-200 text-blue-700'
+      badgeColor: 'bg-purple-200 text-purple-700'
     },
     {
       id: 'google-docs',
@@ -91,7 +91,7 @@ export default function NodeDirectory({ isOpen, onClose, onNodeAdd }: NodeDirect
       description: 'Create and edit Google Docs',
       icon: '📄',
       badge: 'MCP',
-      badgeColor: 'bg-blue-200 text-blue-700'
+      badgeColor: 'bg-purple-200 text-purple-700'
     },
     {
       id: 'google-ads',
@@ -137,7 +137,10 @@ export default function NodeDirectory({ isOpen, onClose, onNodeAdd }: NodeDirect
             placeholder="Search nodes..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-700"
+            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm text-gray-700"
+            style={{ outlineColor: '#A929EE' }}
+            onFocus={(e) => e.currentTarget.style.borderColor = '#A929EE'}
+            onBlur={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
           />
         </div>
       </div>

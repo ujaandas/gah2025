@@ -124,7 +124,7 @@ export default function LogPanel({ isOpen, onToggle }: LogPanelProps) {
   const getLevelColor = (level: Log['level']) => {
     switch (level) {
       case 'info':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+        return 'bg-purple-100 text-purple-800 border-purple-200';
       case 'warning':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'error':
@@ -199,7 +199,7 @@ export default function LogPanel({ isOpen, onToggle }: LogPanelProps) {
           <div className="bg-gray-50 p-3 border-b border-gray-200">
             <div className="flex gap-2 flex-wrap">
               <span className="text-xs text-gray-600 font-medium">Filters:</span>
-              <button className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 hover:bg-blue-200">
+              <button className="text-xs px-2 py-1 rounded bg-purple-100 text-purple-700 hover:bg-purple-200">
                 All
               </button>
               <button className="text-xs px-2 py-1 rounded bg-gray-200 text-gray-700 hover:bg-gray-300">
@@ -245,7 +245,7 @@ export default function LogPanel({ isOpen, onToggle }: LogPanelProps) {
           <div className="bg-gray-50 p-3 border-t border-gray-200">
             <div className="flex items-center justify-between text-xs text-gray-600">
               <span>{logs.length} logs</span>
-              <button className="text-blue-600 hover:text-blue-700 font-medium">
+              <button className="font-medium" style={{ color: '#A929EE' }} onMouseEnter={(e) => e.currentTarget.style.color = '#8B1FCC'} onMouseLeave={(e) => e.currentTarget.style.color = '#A929EE'}>
                 Clear All
               </button>
             </div>
