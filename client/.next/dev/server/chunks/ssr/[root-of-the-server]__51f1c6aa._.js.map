@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 18, "column": 0}, "map": {"version":3,"sources":["file:///Users/hireshb/Documents/coding/side-projects/gah2025/client/src/app/page.tsx"],"sourcesContent":["export default function Home() {\n  return (\n    <div\n      className=\"min-h-screen w-full\"\n      style={{\n        backgroundImage: 'radial-gradient(circle, #d1d5db 1px, transparent 1px)',\n        backgroundSize: '20px 20px'\n      }}\n    >\n\n    </div>\n  );\n}\n"],"names":[],"mappings":";;;;;;AAAe,SAAS;IACtB,qBACE,8SAAC;QACC,WAAU;QACV,OAAO;YACL,iBAAiB;YACjB,gBAAgB;QAClB;;;;;;AAKN"}}]
-}
