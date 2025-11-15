@@ -1,8 +1,5 @@
-from typing import Dict, List, Optional, Any, Callable, Set
-from enum import Enum
+from typing import Dict, Optional, Any, Callable
 from dataclasses import dataclass, field
-from datetime import datetime
-import uuid
 
 
 # -------------------------------------------------------------------
@@ -12,13 +9,14 @@ import uuid
 class Edge:
     """
     Represents a directed edge between nodes.
-    
+
     Matches langgraph's Edge structure:
     - source: str (required)
     - target: str (required)
     - data: Optional[Any] (can be None)
     - conditional: bool (required)
     """
+
     source: str
     target: str
     data: Optional[Any] = None
@@ -36,4 +34,3 @@ class Edge:
             "conditional": self.conditional,
             "metadata": self.metadata,
         }
-

@@ -1,6 +1,7 @@
 from langgraph.graph import StateGraph, START, END
 
-from get_graph import CallableGraphHelper
+# from get_graph import CallableGraphHelper
+from get_graph import get_graph
 
 graph = StateGraph(dict)
 
@@ -25,7 +26,8 @@ graph.add_edge("step2", END)  # step2 -> END
 
 def build():
     compiled_graph = graph.compile()
-    CallableGraphHelper.get_graph(compiled_graph)
+    # CallableGraphHelper.get_graph(compiled_graph)
+    get_graph(compiled_graph)
 
 
 if __name__ == "__main__":
