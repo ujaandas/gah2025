@@ -1,7 +1,4 @@
 from typing import Dict, List, Optional, Any, Callable, Set
-from enum import Enum
-from dataclasses import dataclass, field
-from datetime import datetime
 import uuid
 
 from models.node import Node, NodeType
@@ -12,12 +9,13 @@ class Graph:
     """
     Represents a workflow graph created FROM the user's LangGraph object.
     """
+
     def __init__(
         self,
         nodes: Optional[Dict[str, Any]] = None,
         edges: Optional[List[Any]] = None,
         name: str = "",
-        description: str = ""
+        description: str = "",
     ):
         # Convert nodes - handle both our Node objects and raw LangGraph data
         self.nodes: Dict[str, Node] = {}
@@ -27,17 +25,17 @@ class Graph:
                     self.nodes[node_id] = node
                 else:
                     # Raw node_id from LangGraph (nodes is just a set/dict of IDs)
-                    is_system_node = node_id.startswith('__') and node_id.endswith('__')
+                    is_system_node = node_id.startswith("__") and node_id.endswith("__")
                     node_type = NodeType.SYSTEM if is_system_node else NodeType.STEP
-                    
+
                     self.nodes[node_id] = Node(
                         id=node_id,
                         name=node_id,
                         data=node if not isinstance(node_id, str) else None,
                         metadata={},
-                        node_type=node_type
+                        node_type=node_type,
                     )
-        
+
         # Convert edges - handle both our Edge objects and raw LangGraph data
         self.edges: List[Edge] = []
         if edges is not None:
@@ -50,41 +48,59 @@ class Graph:
                     if len(edge) >= 2:
                         source_id = edge[0]
                         target_id = edge[1]
-                        self.edges.append(Edge(
-                            source=source_id,
-                            target=target_id,
-                            data=None,
-                            conditional=False,
-                            condition=None,
-                            metadata={}
-                        ))
+                        self.edges.append(
+                            Edge(
+                                source=source_id,
+                                target=target_id,
+                                data=None,
+                                conditional=False,
+                                condition=None,
+                                metadata={},
+                            )
+                        )
                     else:
-                        raise ValueError(f"Edge tuple must have at least 2 elements, got {len(edge)}: {edge}")
-                elif hasattr(edge, 'source') and hasattr(edge, 'target'):
+                        raise ValueError(
+                            f"Edge tuple must have at least 2 elements, got {len(edge)}: {edge}"
+                        )
+                elif hasattr(edge, "source") and hasattr(edge, "target"):
                     # LangGraph edge object with source/target attributes
-                    self.edges.append(Edge(
-                        source=edge.source,
-                        target=edge.target,
-                        data=getattr(edge, 'data', None),
-                        conditional=getattr(edge, 'conditional', False),
-                        condition=getattr(edge, 'condition', None),
-                        metadata=getattr(edge, 'metadata', {})
-                    ))
-                elif hasattr(edge, '__getitem__'):
+                    self.edges.append(
+                        Edge(
+                            source=edge.source,
+                            target=edge.target,
+                            data=getattr(edge, "data", None),
+                            conditional=getattr(edge, "conditional", False),
+                            condition=getattr(edge, "condition", None),
+                            metadata=getattr(edge, "metadata", {}),
+                        )
+                    )
+                elif hasattr(edge, "__getitem__"):
                     # Edge-like object that supports indexing
                     try:
                         source_id = edge[0]
                         target_id = edge[1]
-                        self.edges.append(Edge(
-                            source=source_id,
-                            target=target_id,
-                            data=getattr(edge, 'data', None) if hasattr(edge, 'data') else None,
-                            conditional=getattr(edge, 'conditional', False) if hasattr(edge, 'conditional') else False,
-                            condition=getattr(edge, 'condition', None) if hasattr(edge, 'condition') else None,
-                            metadata=getattr(edge, 'metadata', {}) if hasattr(edge, 'metadata') else {}
-                        ))
+                        self.edges.append(
+                            Edge(
+                                source=source_id,
+                                target=target_id,
+                                data=getattr(edge, "data", None)
+                                if hasattr(edge, "data")
+                                else None,
+                                conditional=getattr(edge, "conditional", False)
+                                if hasattr(edge, "conditional")
+                                else False,
+                                condition=getattr(edge, "condition", None)
+                                if hasattr(edge, "condition")
+                                else None,
+                                metadata=getattr(edge, "metadata", {})
+                                if hasattr(edge, "metadata")
+                                else {},
+                            )
+                        )
                     except (IndexError, TypeError) as e:
-                        raise ValueError(f"Cannot convert edge to Edge model: {edge} (error: {e})")
+                        raise ValueError(
+                            f"Cannot convert edge to Edge model: {edge} (error: {e})"
+                        )
                 else:
                     raise ValueError(f"Unknown edge format: {type(edge)} - {edge}")
 
@@ -107,19 +123,19 @@ class Graph:
         """Updates start_nodes and end_nodes based on edges."""
         if not self.edges:
             return
-        
+
         all_sources = {e.source for e in self.edges}
         all_targets = {e.target for e in self.edges}
-        
+
         # Start nodes are sources that are never targets (or __start__)
         self.start_nodes = all_sources - all_targets
-        if '__start__' in self.nodes:
-            self.start_nodes.add('__start__')
-        
+        if "__start__" in self.nodes:
+            self.start_nodes.add("__start__")
+
         # End nodes are targets that are never sources (or __end__)
         self.end_nodes = all_targets - all_sources
-        if '__end__' in self.nodes:
-            self.end_nodes.add('__end__')
+        if "__end__" in self.nodes:
+            self.end_nodes.add("__end__")
 
     # ------------------------------------------------------
     # Node + Edge management
@@ -170,13 +186,16 @@ class Graph:
             "id": self.id,
             "name": self.name,
             "description": self.description,
-            "nodes": {nid: {
-                "id": n.id,
-                "name": n.name,
-                "node_type": n.node_type.value,
-                "is_testing": n.is_testing
-            } for nid, n in self.nodes.items()},
+            "nodes": {
+                nid: {
+                    "id": n.id,
+                    "name": n.name,
+                    "node_type": n.node_type.value,
+                    "is_testing": n.is_testing,
+                }
+                for nid, n in self.nodes.items()
+            },
             "edges": [e.to_dict() for e in self.edges],
             "start_nodes": list(self.start_nodes),
-            "end_nodes": list(self.end_nodes)
+            "end_nodes": list(self.end_nodes),
         }
