@@ -51,7 +51,7 @@ export default function NodeDirectory({ isOpen, onClose, onNodeAdd }: NodeDirect
       description: 'Manage data in Airtable bases',
       icon: '🔷',
       badge: 'MCP',
-      badgeColor: 'bg-purple-200 text-purple-700'
+      badgeColor: 'bg-gray-200 text-gray-800'
     },
     {
       id: 'gmail',
@@ -59,7 +59,7 @@ export default function NodeDirectory({ isOpen, onClose, onNodeAdd }: NodeDirect
       description: 'Read and send Gmail messages',
       icon: '📧',
       badge: 'MCP',
-      badgeColor: 'bg-red-200 text-red-700'
+      badgeColor: 'bg-gray-200 text-gray-800'
     },
     {
       id: 'google-sheets',
@@ -67,7 +67,7 @@ export default function NodeDirectory({ isOpen, onClose, onNodeAdd }: NodeDirect
       description: 'Read and write Google Sheets data',
       icon: '📊',
       badge: 'MCP',
-      badgeColor: 'bg-green-200 text-green-700'
+      badgeColor: 'bg-gray-200 text-gray-800'
     },
     {
       id: 'google-drive',
@@ -75,7 +75,7 @@ export default function NodeDirectory({ isOpen, onClose, onNodeAdd }: NodeDirect
       description: 'Manage files in Google Drive',
       icon: '📁',
       badge: 'MCP',
-      badgeColor: 'bg-purple-200 text-purple-700'
+      badgeColor: 'bg-gray-200 text-gray-800'
     },
     {
       id: 'google-calendar',
@@ -83,7 +83,7 @@ export default function NodeDirectory({ isOpen, onClose, onNodeAdd }: NodeDirect
       description: 'Manage Google Calendar events',
       icon: '📅',
       badge: 'MCP',
-      badgeColor: 'bg-purple-200 text-purple-700'
+      badgeColor: 'bg-gray-200 text-gray-800'
     },
     {
       id: 'google-docs',
@@ -91,7 +91,7 @@ export default function NodeDirectory({ isOpen, onClose, onNodeAdd }: NodeDirect
       description: 'Create and edit Google Docs',
       icon: '📄',
       badge: 'MCP',
-      badgeColor: 'bg-purple-200 text-purple-700'
+      badgeColor: 'bg-gray-200 text-gray-800'
     },
     {
       id: 'google-ads',
@@ -99,7 +99,7 @@ export default function NodeDirectory({ isOpen, onClose, onNodeAdd }: NodeDirect
       description: 'Manage Google Ads',
       icon: '📣',
       badge: 'MCP',
-      badgeColor: 'bg-yellow-200 text-yellow-700'
+      badgeColor: 'bg-gray-200 text-gray-800'
     }
   ];
 
@@ -137,10 +137,7 @@ export default function NodeDirectory({ isOpen, onClose, onNodeAdd }: NodeDirect
             placeholder="Search nodes..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 text-sm text-gray-700"
-            style={{ outlineColor: '#A929EE' }}
-            onFocus={(e) => e.currentTarget.style.borderColor = '#A929EE'}
-            onBlur={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
+            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-800 text-sm text-gray-700"
           />
         </div>
       </div>

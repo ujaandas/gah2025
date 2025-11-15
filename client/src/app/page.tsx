@@ -34,8 +34,8 @@ const initialNodes: Node[] = [
       )
     },
     style: {
-      background: '#dcfce7',
-      border: '2px solid #22c55e',
+      background: '#f9fafb',
+      border: '2px solid #1f2937',
       borderRadius: '8px',
       padding: '10px'
     }
@@ -55,8 +55,8 @@ const initialNodes: Node[] = [
       )
     },
     style: {
-      background: '#f3e8ff',
-      border: '3px solid #A929EE',
+      background: '#ffffff',
+      border: '3px solid #1f2937',
       borderRadius: '12px',
       padding: '15px',
       minWidth: '150px'
@@ -76,8 +76,8 @@ const initialNodes: Node[] = [
       )
     },
     style: {
-      background: '#fef3c7',
-      border: '2px solid #f59e0b',
+      background: '#f9fafb',
+      border: '2px solid #4b5563',
       borderRadius: '8px',
       padding: '12px'
     }
@@ -95,8 +95,8 @@ const initialNodes: Node[] = [
       )
     },
     style: {
-      background: '#fed7aa',
-      border: '2px solid #ea580c',
+      background: '#f9fafb',
+      border: '2px solid #4b5563',
       borderRadius: '8px',
       padding: '12px'
     }
@@ -114,8 +114,8 @@ const initialNodes: Node[] = [
       )
     },
     style: {
-      background: '#e0e7ff',
-      border: '2px solid #6366f1',
+      background: '#f9fafb',
+      border: '2px solid #4b5563',
       borderRadius: '8px',
       padding: '12px'
     }
@@ -133,8 +133,8 @@ const initialNodes: Node[] = [
       )
     },
     style: {
-      background: '#fce7f3',
-      border: '2px solid #ec4899',
+      background: '#f9fafb',
+      border: '2px solid #4b5563',
       borderRadius: '8px',
       padding: '12px'
     }
@@ -153,8 +153,8 @@ const initialNodes: Node[] = [
       )
     },
     style: {
-      background: '#fee2e2',
-      border: '2px solid #ef4444',
+      background: '#f9fafb',
+      border: '2px solid #1f2937',
       borderRadius: '8px',
       padding: '10px'
     }
@@ -168,7 +168,7 @@ const initialEdges: Edge[] = [
     source: '__start__',
     target: 'supervisor',
     animated: false,
-    style: { stroke: '#22c55e', strokeWidth: 2 }
+    style: { stroke: '#1f2937', strokeWidth: 2 }
   },
   // Supervisor to Agents (conditional - dashed lines)
   {
@@ -176,7 +176,7 @@ const initialEdges: Edge[] = [
     source: 'supervisor',
     target: 'Excel',
     animated: true,
-    style: { stroke: '#A929EE', strokeWidth: 2, strokeDasharray: '5,5' },
+    style: { stroke: '#1f2937', strokeWidth: 2, strokeDasharray: '5,5' },
     label: 'route'
   },
   {
@@ -184,7 +184,7 @@ const initialEdges: Edge[] = [
     source: 'supervisor',
     target: 'PowerPoint',
     animated: true,
-    style: { stroke: '#A929EE', strokeWidth: 2, strokeDasharray: '5,5' },
+    style: { stroke: '#1f2937', strokeWidth: 2, strokeDasharray: '5,5' },
     label: 'route'
   },
   {
@@ -192,7 +192,7 @@ const initialEdges: Edge[] = [
     source: 'supervisor',
     target: 'Browser',
     animated: true,
-    style: { stroke: '#A929EE', strokeWidth: 2, strokeDasharray: '5,5' },
+    style: { stroke: '#1f2937', strokeWidth: 2, strokeDasharray: '5,5' },
     label: 'route'
   },
   {
@@ -200,7 +200,7 @@ const initialEdges: Edge[] = [
     source: 'supervisor',
     target: 'Research',
     animated: true,
-    style: { stroke: '#A929EE', strokeWidth: 2, strokeDasharray: '5,5' },
+    style: { stroke: '#1f2937', strokeWidth: 2, strokeDasharray: '5,5' },
     label: 'route'
   },
   {
@@ -208,7 +208,7 @@ const initialEdges: Edge[] = [
     source: 'supervisor',
     target: '__end__',
     animated: true,
-    style: { stroke: '#A929EE', strokeWidth: 2, strokeDasharray: '5,5' },
+    style: { stroke: '#1f2937', strokeWidth: 2, strokeDasharray: '5,5' },
     label: 'finish'
   },
   // Agents back to Supervisor (non-conditional - solid lines)
@@ -311,9 +311,9 @@ export default function Home() {
       <button
         onClick={() => setIsDirectoryOpen(true)}
         className="fixed top-24 left-8 text-white w-12 h-12 rounded-full shadow-lg hover:shadow-xl transition-all font-medium flex items-center justify-center z-[1000]"
-        style={{ background: '#A929EE' }}
-        onMouseEnter={(e) => e.currentTarget.style.background = '#8B1FCC'}
-        onMouseLeave={(e) => e.currentTarget.style.background = '#A929EE'}
+        style={{ background: '#1f2937' }}
+        onMouseEnter={(e) => e.currentTarget.style.background = '#111827'}
+        onMouseLeave={(e) => e.currentTarget.style.background = '#1f2937'}
       >
         <span className="text-2xl">+</span>
       </button>

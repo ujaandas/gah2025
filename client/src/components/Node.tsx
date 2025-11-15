@@ -8,7 +8,7 @@ interface NodeProps {
 export default function Node({ id, title, description, position }: NodeProps) {
   return (
     <div
-      className="absolute bg-white border-2 border-gray-300 rounded-lg shadow-lg p-4 min-w-[200px] hover:shadow-xl transition-shadow cursor-pointer"
+      className="absolute bg-white border-2 border-gray-800 rounded-lg shadow-lg p-4 min-w-[200px] hover:shadow-xl hover:border-gray-900 transition-all cursor-pointer"
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,

@@ -124,13 +124,13 @@ export default function LogPanel({ isOpen, onToggle }: LogPanelProps) {
   const getLevelColor = (level: Log['level']) => {
     switch (level) {
       case 'info':
-        return 'bg-purple-100 text-purple-800 border-purple-200';
+        return 'bg-gray-50 text-gray-800 border-gray-300';
       case 'warning':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return 'bg-gray-100 text-gray-900 border-gray-400';
       case 'error':
-        return 'bg-red-100 text-red-800 border-red-200';
+        return 'bg-gray-200 text-gray-900 border-gray-500';
       case 'success':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-gray-50 text-gray-800 border-gray-300';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -165,7 +165,7 @@ export default function LogPanel({ isOpen, onToggle }: LogPanelProps) {
       {/* Toggle Button - Fixed on the right side */}
       <button
         onClick={onToggle}
-        className="fixed top-1/2 right-0 -translate-y-1/2 bg-gray-800 hover:bg-gray-700 text-white px-3 py-8 rounded-l-lg shadow-lg transition-all z-[1000] flex items-center gap-2"
+        className="fixed top-1/2 right-0 -translate-y-1/2 bg-gray-800 hover:bg-gray-900 text-white px-3 py-8 rounded-l-lg shadow-lg transition-all z-[1000] flex items-center gap-2"
         style={{ right: isOpen ? '400px' : '0' }}
       >
         <span className="text-sm font-medium" style={{ writingMode: 'vertical-rl' }}>
@@ -199,7 +199,7 @@ export default function LogPanel({ isOpen, onToggle }: LogPanelProps) {
           <div className="bg-gray-50 p-3 border-b border-gray-200">
             <div className="flex gap-2 flex-wrap">
               <span className="text-xs text-gray-600 font-medium">Filters:</span>
-              <button className="text-xs px-2 py-1 rounded bg-purple-100 text-purple-700 hover:bg-purple-200">
+              <button className="text-xs px-2 py-1 rounded bg-gray-800 text-white hover:bg-gray-900">
                 All
               </button>
               <button className="text-xs px-2 py-1 rounded bg-gray-200 text-gray-700 hover:bg-gray-300">
@@ -245,7 +245,7 @@ export default function LogPanel({ isOpen, onToggle }: LogPanelProps) {
           <div className="bg-gray-50 p-3 border-t border-gray-200">
             <div className="flex items-center justify-between text-xs text-gray-600">
               <span>{logs.length} logs</span>
-              <button className="font-medium" style={{ color: '#A929EE' }} onMouseEnter={(e) => e.currentTarget.style.color = '#8B1FCC'} onMouseLeave={(e) => e.currentTarget.style.color = '#A929EE'}>
+              <button className="font-medium text-gray-800 hover:text-gray-900 transition-colors">
                 Clear All
               </button>
             </div>
