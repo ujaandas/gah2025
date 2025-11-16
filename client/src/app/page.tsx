@@ -17,6 +17,7 @@ import LogPanel from '@/components/LogPanel';
 import PromptInjectNode from '@/components/PromptInjectNode';
 import GraphCanvas from '@/components/GraphCanvas';
 import GraphControls from '@/components/GraphControls';
+import NodeDataPanel from '@/components/NodeDataPanel';
 
 import { mockGraphStructure } from '@/lib/data/mockGraphData';
 import { convertGraphStructure } from '@/lib/utils/graphConverter';
@@ -39,6 +40,8 @@ function GraphEditor() {
   const [isLoadingGraph, setIsLoadingGraph] = useState(true);
   const [graphLoadError, setGraphLoadError] = useState<string | null>(null);
   const [currentGraphId, setCurrentGraphId] = useState<string | null>(null);
+  const [isNodeDataPanelOpen, setIsNodeDataPanelOpen] = useState(false);
+  const [selectedNodeForData, setSelectedNodeForData] = useState<{ id: string; name: string } | null>(null);
 
   // Custom hooks for managing state and behavior
   const {
@@ -51,15 +54,31 @@ function GraphEditor() {
     executionLogs,
     isExecuting,
     executingNodeIds,
+    completedNodeIds,
     clearLogs,
     addLog,
   } = useGraphEditor();
 
   const {
     selectedNode,
-    onNodeClick,
+    onNodeClick: originalOnNodeClick,
     handleDeleteNode,
   } = useNodeSelection(edges, setNodes, setEdges);
+
+  // Enhanced node click handler to also open data panel
+  const onNodeClick = useCallback((event: React.MouseEvent, node: any) => {
+    // Call original handler for selection
+    originalOnNodeClick(event, node);
+    
+    // Open data panel with node info
+    setSelectedNodeForData({ id: node.id, name: node.data?.label || node.id });
+    setIsNodeDataPanelOpen(true);
+  }, [originalOnNodeClick]);
+
+  // Handler to fetch node data
+  const handleFetchNodeData = useCallback(async (graphId: string, nodeId: string) => {
+    return await graphApiClient.getNodeState(graphId, nodeId);
+  }, []);
 
   const {
     draggedNode,
@@ -171,41 +190,42 @@ function GraphEditor() {
     loadGraphFromApi();
   }, [fitView, setNodes, setEdges]);
 
-  // Update node styles when executing
+  // Update node styles when executing or completed
   useEffect(() => {
-    if (executingNodeIds.length > 0) {
-      setNodes((nds) =>
-        nds.map((node) => {
-          if (executingNodeIds.includes(node.id)) {
-            return {
-              ...node,
-              style: {
-                ...node.style,
-                borderWidth: '3px',
-                borderStyle: 'solid',
-                borderColor: '#3b82f6',
-                boxShadow: '0 0 20px rgba(59, 130, 246, 0.5)',
-                animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-              },
-            };
-          }
+    setNodes((nds) =>
+      nds.map((node) => {
+        // Currently executing - blue pulsing border
+        if (executingNodeIds.includes(node.id)) {
           return {
             ...node,
             style: {
               ...node.style,
-              borderWidth: undefined,
-              borderStyle: undefined,
-              borderColor: undefined,
-              boxShadow: undefined,
+              borderWidth: '3px',
+              borderStyle: 'solid',
+              borderColor: '#3b82f6',
+              boxShadow: '0 0 20px rgba(59, 130, 246, 0.5)',
+              animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              backgroundColor: '#eff6ff',
+            },
+          };
+        }
+        // Completed - green border
+        else if (completedNodeIds.includes(node.id)) {
+          return {
+            ...node,
+            style: {
+              ...node.style,
+              borderWidth: '3px',
+              borderStyle: 'solid',
+              borderColor: '#10b981',
+              boxShadow: '0 0 10px rgba(16, 185, 129, 0.3)',
+              backgroundColor: '#f0fdf4',
               animation: undefined,
             },
           };
-        })
-      );
-    } else {
-      // Reset all node styles when not executing
-      setNodes((nds) =>
-        nds.map((node) => ({
+        }
+        // Default - no special styling
+        return {
           ...node,
           style: {
             ...node.style,
@@ -214,11 +234,12 @@ function GraphEditor() {
             borderColor: undefined,
             boxShadow: undefined,
             animation: undefined,
+            backgroundColor: undefined,
           },
-        }))
-      );
-    }
-  }, [executingNodeIds, setNodes]);
+        };
+      })
+    );
+  }, [executingNodeIds, completedNodeIds, setNodes]);
 
   // Update edge styles when executing - animate edges connected to executing nodes
   useEffect(() => {
@@ -358,6 +379,16 @@ function GraphEditor() {
         onToggle={() => setIsLogPanelOpen(!isLogPanelOpen)}
         logs={executionLogs}
         onClearLogs={clearLogs}
+      />
+
+      {/* Node Data Panel */}
+      <NodeDataPanel
+        isOpen={isNodeDataPanelOpen}
+        nodeId={selectedNodeForData?.id || null}
+        nodeName={selectedNodeForData?.name || null}
+        graphId={currentGraphId}
+        onClose={() => setIsNodeDataPanelOpen(false)}
+        onFetchData={handleFetchNodeData}
       />
     </div>
   );

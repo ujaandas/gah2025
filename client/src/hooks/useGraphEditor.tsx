@@ -20,6 +20,7 @@ export function useGraphEditor() {
   const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
   const [isExecuting, setIsExecuting] = useState(false);
   const [executingNodeIds, setExecutingNodeIds] = useState<string[]>([]);
+  const [completedNodeIds, setCompletedNodeIds] = useState<string[]>([]);
   const streamCleanupRef = useRef<(() => void) | null>(null);
 
   // Add a log entry
@@ -217,6 +218,7 @@ export function useGraphEditor() {
     
     console.log('[useGraphEditor] Starting streaming execution...');
     setIsExecuting(true);
+    setCompletedNodeIds([]); // Clear completed nodes on new execution
     clearLogs();
 
     // Queue for events to process with delay
@@ -238,13 +240,9 @@ export function useGraphEditor() {
         if (event.event_type === 'node_start') {
           pendingNodeStarts.push(event);
           
-          // Wait a tiny bit to see if more node_start events arrive (indicating concurrent execution)
-          await new Promise(resolve => setTimeout(resolve, 50));
-          
-          // Collect all pending node_start events
+          // Collect all pending node_start events (no delay needed)
           while (eventQueue.length > 0 && eventQueue[0].event_type === 'node_start') {
             pendingNodeStarts.push(eventQueue.shift()!);
-            await new Promise(resolve => setTimeout(resolve, 10));
           }
           
           // Now process all the collected node_start events as a single layer
@@ -286,9 +284,6 @@ export function useGraphEditor() {
             
             // Clear the buffer
             pendingNodeStarts = [];
-            
-            // Add delay to see the nodes running
-            await new Promise(resolve => setTimeout(resolve, 4000));
           }
           
           // Continue to process node_complete events
@@ -334,6 +329,7 @@ export function useGraphEditor() {
           case 'node_complete':
             if (event.node_id) {
               setExecutingNodeIds(prev => prev.filter(id => id !== event.node_id));
+              setCompletedNodeIds(prev => [...prev, event.node_id!]); // Add to completed nodes
               currentLayer = currentLayer.filter(id => id !== event.node_id);
             }
             
@@ -584,6 +580,7 @@ export function useGraphEditor() {
     executionLogs,
     isExecuting,
     executingNodeIds,
+    completedNodeIds,
     clearLogs,
     addLog,
   };

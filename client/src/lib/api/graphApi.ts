@@ -251,6 +251,32 @@ export class GraphApiClient {
   }
 
   /**
+   * Get node state (data after execution)
+   */
+  async getNodeState(graphId: string, nodeId: string): Promise<{
+    graph_id: string;
+    node_id: string;
+    node_name: string;
+    current_state: Record<string, any>;
+    execution_count: number;
+    last_executed?: string;
+  }> {
+    const response = await fetch(`${this.baseUrl}/api/nodes/${graphId}/${nodeId}/state`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+      throw new Error(error.detail || `Failed to get node state: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
    * Execute a graph with streaming updates via Server-Sent Events
    */
   streamExecuteGraph(

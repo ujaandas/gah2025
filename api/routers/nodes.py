@@ -64,11 +64,19 @@ async def get_node_state(graph_id: str, node_id: str):
             detail=f"Node not found: {node_id}"
         )
     
+    # Get node-specific output from execution history
+    node_output = {}
+    if node.execution_history and len(node.execution_history) > 0:
+        # Get the latest execution output
+        latest_execution = node.execution_history[-1]
+        if latest_execution.get("success") and "output" in latest_execution:
+            node_output = latest_execution["output"]
+    
     return NodeStateResponse(
         graph_id=graph_id,
         node_id=node_id,
         node_name=node.name,
-        current_state=graph.state,
+        current_state=node_output,  # Return node-specific output instead of global state
         execution_count=node.execution_count,
         last_executed=node.last_executed,
     )
