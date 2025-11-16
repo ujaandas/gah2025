@@ -8,13 +8,21 @@ from types import ModuleType
 
 
 class LangGraphCtxHelper:
-    def __init__(self, compiled_graph: CompiledStateGraph):
-        self.filepath: str = None  # fully resolved filepath
+    def __init__(self, compiled_graph: CompiledStateGraph, module: ModuleType = None, filepath: str = None):
+        self.filepath: str = filepath  # fully resolved filepath
         self.module_name: str = None  # module name (ie; filename w/o extension)
         self.lc_graph: LangChainGraph = None  # langgraph graph
-        self.module: ModuleType = None  # module
+        self.module: ModuleType = module  # module
 
-        self.load_module()
+        if self.module is None:
+            self.load_module()
+        else:
+            # Module was provided, just set the names
+            if self.filepath is None:
+                self.filepath = getattr(module, '__file__', None)
+            if self.filepath:
+                self.module_name = os.path.basename(self.filepath).removesuffix(".py")
+        
         self.extract_graph(compiled_graph)
 
     def get_filepath(self) -> None:

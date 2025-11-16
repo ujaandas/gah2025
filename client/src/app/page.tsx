@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback, useEffect } from 'react';
+import { useMemo, useCallback, useEffect, useState } from 'react';
 import {
   addEdge,
   useNodesState,
@@ -20,20 +20,25 @@ import GraphControls from '@/components/GraphControls';
 
 import { mockGraphStructure } from '@/lib/data/mockGraphData';
 import { convertGraphStructure } from '@/lib/utils/graphConverter';
+import { convertApiGraphToReactFlow } from '@/lib/utils/apiGraphConverter';
+import { graphApiClient } from '@/lib/api/graphApi';
 import { useGraphEditor } from '@/hooks/useGraphEditor';
 import { useNodeSelection } from '@/hooks/useNodeSelection';
 import { useNodeDragAndDrop } from '@/hooks/useNodeDragAndDrop';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
-// Convert the mock graph structure
-const { nodes: initialNodes, edges: initialEdges } = convertGraphStructure(mockGraphStructure);
+// Convert the mock graph structure as fallback
+const { nodes: fallbackNodes, edges: fallbackEdges } = convertGraphStructure(mockGraphStructure);
 
 
 
 function GraphEditor() {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [nodes, setNodes, onNodesChange] = useNodesState(fallbackNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(fallbackEdges);
   const { fitView } = useReactFlow();
+  const [isLoadingGraph, setIsLoadingGraph] = useState(true);
+  const [graphLoadError, setGraphLoadError] = useState<string | null>(null);
+  const [currentGraphId, setCurrentGraphId] = useState<string | null>(null);
 
   // Custom hooks for managing state and behavior
   const {
@@ -41,21 +46,20 @@ function GraphEditor() {
     setIsDirectoryOpen,
     isLogPanelOpen,
     setIsLogPanelOpen,
-    promptData,
-    setPromptData,
     handleRun,
     handleNodeAdd: handleNodeAddBase,
     executionLogs,
     isExecuting,
     executingNodeIds,
     clearLogs,
+    addLog,
   } = useGraphEditor();
 
   const {
     selectedNode,
     onNodeClick,
     handleDeleteNode,
-  } = useNodeSelection(edges, setNodes, setEdges, promptData, setPromptData);
+  } = useNodeSelection(edges, setNodes, setEdges);
 
   const {
     draggedNode,
@@ -63,10 +67,109 @@ function GraphEditor() {
     onNodeDragStart,
     onNodeDrag,
     onNodeDragStop,
-  } = useNodeDragAndDrop(nodes, edges, initialEdges, setNodes, setEdges, fitView);
+  } = useNodeDragAndDrop(nodes, edges, fallbackEdges, setNodes, setEdges, fitView, currentGraphId, addLog);
 
   // Keyboard shortcuts
   useKeyboardShortcuts(selectedNode, handleDeleteNode);
+
+  // Load graph from API on mount
+  useEffect(() => {
+    const loadGraphFromApi = async () => {
+      setIsLoadingGraph(true);
+      setGraphLoadError(null);
+      
+      try {
+        // First check if API is healthy
+        await graphApiClient.healthCheck();
+        
+        let graphData;
+        let loadedGraphId: string | null = null;
+        
+        // Always try to load a fresh graph from backend
+        console.log('Loading graph from backend...');
+        try {
+          const loadResponse = await graphApiClient.loadGraph({
+            file_path: '../backend/graph_2.py',
+            graph_name: 'Graph 2 Workflow',
+            description: 'Graph 2 loaded from backend'
+          });
+          graphData = loadResponse.structure;
+          loadedGraphId = loadResponse.graph_id;
+          console.log('Loaded graph from backend with ID:', loadedGraphId);
+          addLog({ 
+            level: 'success', 
+            message: `Loaded graph: ${loadResponse.name} (ID: ${loadedGraphId})`,
+            source: 'API'
+          });
+        } catch (loadError) {
+          console.error('Failed to load graph from backend:', loadError);
+          
+          // Try to list existing graphs as fallback
+          const graphList = await graphApiClient.listGraphs();
+          
+          if (graphList.graphs.length > 0) {
+            // Load the first available graph
+            const firstGraph = graphList.graphs[0];
+            const graphResponse = await graphApiClient.getGraph(firstGraph.graph_id);
+            graphData = graphResponse.structure;
+            loadedGraphId = firstGraph.graph_id;
+            console.log('Loaded existing graph:', firstGraph.name);
+            addLog({ 
+              level: 'success', 
+              message: `Loaded existing graph: ${firstGraph.name}`,
+              source: 'API'
+            });
+          } else {
+            addLog({ 
+              level: 'warning', 
+              message: 'Could not load graph from backend, using mock data',
+              source: 'API'
+            });
+            // Use mock data as fallback
+            setIsLoadingGraph(false);
+            setCurrentGraphId(null);
+            return;
+          }
+        }
+        
+        setCurrentGraphId(loadedGraphId);
+        
+        // Convert API graph structure to React Flow format
+        console.log('Raw graph data from API:', graphData);
+        console.log('Nodes in graphData:', Object.keys(graphData.nodes || {}));
+        console.log('Edges in graphData:', graphData.edges);
+        
+        const { nodes: apiNodes, edges: apiEdges } = convertApiGraphToReactFlow(graphData);
+        
+        console.log('Converted to React Flow - Nodes:', apiNodes.length, apiNodes);
+        console.log('Converted to React Flow - Edges:', apiEdges.length, apiEdges);
+        
+        // Update nodes and edges
+        setNodes(apiNodes);
+        setEdges(apiEdges);
+        
+        // Fit view after a short delay to ensure nodes are rendered
+        setTimeout(() => {
+          fitView({ padding: 0.2 });
+        }, 100);
+        
+      } catch (error) {
+        console.error('Failed to load graph from API:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        setGraphLoadError(errorMessage);
+        addLog({ 
+          level: 'error', 
+          message: `Failed to connect to API: ${errorMessage}. Using mock data.`,
+          source: 'API'
+        });
+        // Keep using fallback mock data
+      } finally {
+        setIsLoadingGraph(false);
+      }
+    };
+
+    loadGraphFromApi();
+  }, [fitView, setNodes, setEdges]);
 
   // Update node styles when executing
   useEffect(() => {
@@ -78,7 +181,9 @@ function GraphEditor() {
               ...node,
               style: {
                 ...node.style,
-                border: '3px solid #3b82f6',
+                borderWidth: '3px',
+                borderStyle: 'solid',
+                borderColor: '#3b82f6',
                 boxShadow: '0 0 20px rgba(59, 130, 246, 0.5)',
                 animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
               },
@@ -88,7 +193,9 @@ function GraphEditor() {
             ...node,
             style: {
               ...node.style,
-              border: undefined,
+              borderWidth: undefined,
+              borderStyle: undefined,
+              borderColor: undefined,
               boxShadow: undefined,
               animation: undefined,
             },
@@ -102,7 +209,9 @@ function GraphEditor() {
           ...node,
           style: {
             ...node.style,
-            border: undefined,
+            borderWidth: undefined,
+            borderStyle: undefined,
+            borderColor: undefined,
             boxShadow: undefined,
             animation: undefined,
           },
@@ -167,12 +276,38 @@ function GraphEditor() {
   );
 
   // Wrap handleNodeAdd to pass setNodes
-  const handleNodeAdd = useCallback((nodeData: { id: string; title: string; icon: string; type: string }) => {
+  const handleNodeAdd = useCallback((nodeData: { id: string; title: string; icon: string; type: string; description?: string; nodeType?: string }) => {
     handleNodeAddBase(nodeData, setNodes);
   }, [handleNodeAddBase, setNodes]);
 
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
+      {/* Loading overlay */}
+      {isLoadingGraph && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+        }}>
+          <div style={{
+            background: 'white',
+            padding: '2rem',
+            borderRadius: '8px',
+            textAlign: 'center',
+          }}>
+            <div style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>⏳</div>
+            <div>Loading graph from API...</div>
+          </div>
+        </div>
+      )}
+
       {/* React Flow Canvas */}
       <GraphCanvas
         nodes={nodes}
@@ -192,13 +327,20 @@ function GraphEditor() {
         selectedNode={selectedNode}
         draggedNode={draggedNode}
         hoveredEdge={hoveredEdge}
+        edges={edges}
         onAddNodeClick={() => setIsDirectoryOpen(true)}
         onDeleteNode={handleDeleteNode}
       />
 
       {/* Top Bar */}
       <TopBar 
-        onRun={() => handleRun(selectedNode, nodes, edges)} 
+        onRun={() => {
+          console.log('[Page] TopBar onRun triggered');
+          console.log('[Page] Current isExecuting state:', isExecuting);
+          console.log('[Page] Number of nodes:', nodes.length);
+          console.log('[Page] Number of edges:', edges.length);
+          handleRun(selectedNode, nodes, edges);
+        }} 
         isExecuting={isExecuting}
       />
 

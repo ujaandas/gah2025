@@ -5,6 +5,7 @@ This file contains example requests for the LangGraph Testing Platform API.
 ## Prerequisites
 
 Make sure the API server is running:
+
 ```bash
 cd api
 ./start_server.sh
@@ -23,6 +24,7 @@ curl -X POST http://localhost:8000/api/graphs/load \
 ```
 
 Response:
+
 ```json
 {
   "graph_id": "uuid-here",
@@ -60,6 +62,7 @@ curl -X POST http://localhost:8000/api/nodes/execute \
 ```
 
 Response:
+
 ```json
 {
   "execution_id": "exec-uuid",
@@ -83,6 +86,7 @@ curl http://localhost:8000/api/testing-nodes/templates
 ```
 
 Response:
+
 ```json
 [
   {
@@ -174,6 +178,7 @@ curl -X POST http://localhost:8000/api/analysis/test-suite \
 ```
 
 Response:
+
 ```json
 {
   "suite_id": "suite-uuid",
@@ -207,6 +212,7 @@ curl http://localhost:8000/api/analysis/vulnerabilities/your-graph-id
 ```
 
 Response:
+
 ```json
 {
   "graph_id": "your-graph-id",
@@ -364,6 +370,7 @@ curl http://localhost:8000/health
 ```
 
 Response:
+
 ```json
 {
   "status": "healthy",
@@ -374,8 +381,8 @@ Response:
 ## Interactive API Documentation
 
 Visit http://localhost:8000/docs for interactive API documentation where you can:
+
 - Browse all endpoints
 - Try requests directly in the browser
 - See request/response schemas
 - Download OpenAPI spec
-

@@ -137,21 +137,32 @@ class GraphService:
             raise ImportError(f"Could not load module from {file_path}")
 
         module = importlib.util.module_from_spec(spec)
+        sys.modules["user_graph"] = module
         spec.loader.exec_module(module)
 
-        # Try to find a LangGraph object in the module
-        # This is simplified - would need better detection logic
+        # Try to find a StateGraph object in the module
         for attr_name in dir(module):
+            if attr_name.startswith('_'):
+                continue
+            
             attr = getattr(module, attr_name)
-            if hasattr(attr, "nodes") and hasattr(attr, "edges"):
-                # Found a graph-like object
+            
+            # Check if it's a StateGraph (has nodes dict and edges list)
+            if hasattr(attr, "nodes") and hasattr(attr, "edges") and hasattr(attr, "compile"):
+                # Found a StateGraph - compile it first
                 try:
-                    helper = LangGraphCtxHelper(attr)
+                    print(f"Found StateGraph: {attr_name}")
+                    compiled_graph = attr.compile()
+                    # Pass the module and filepath to avoid stack inspection issues
+                    helper = LangGraphCtxHelper(compiled_graph, module=module, filepath=str(path.absolute()))
                     return CallableGraph(helper, name, description or "")
                 except Exception as e:
                     print(f"Could not create graph from {attr_name}: {e}")
+                    import traceback
+                    traceback.print_exc()
 
         # If no graph found, return empty graph
+        print("No suitable graph found in module, returning empty graph")
         return self._create_empty_graph(name, description)
 
     def _load_from_module(self, module_path: str, name: str, description: Optional[str]) -> CallableGraph:

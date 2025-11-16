@@ -11,7 +11,7 @@ sys.path.insert(0, str(backend_dir))
 
 from node import Node, NodeType
 from testing_nodes.prompt_injection_node import PromptInjectionNode, create_prompt_injection_node
-from testing_nodes.fuzzer_node import FuzzerNode
+# Note: fuzzer_node.py has PromptFuzzer class and fuzzer_node_function, not FuzzerNode class
 
 from models.testing import (
     TestingNodeAddRequest,

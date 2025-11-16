@@ -1,29 +1,49 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { graphApiClient, TestingNodeTemplate } from '@/lib/api/graphApi';
 
 interface NodeDirectoryProps {
   isOpen: boolean;
   onClose: () => void;
-  onNodeAdd: (nodeData: { id: string; title: string; icon: string; type: string }) => void;
+  onNodeAdd: (nodeData: { id: string; title: string; icon: string; type: string; description: string; nodeType: string }) => void;
 }
 
 export default function NodeDirectory({ isOpen, onClose, onNodeAdd }: NodeDirectoryProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [testingNodes, setTestingNodes] = useState<TestingNodeTemplate[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch testing node templates from API
+  useEffect(() => {
+    if (isOpen && testingNodes.length === 0) {
+      setIsLoading(true);
+      setError(null);
+      
+      graphApiClient.getTestingNodeTemplates()
+        .then(templates => {
+          setTestingNodes(templates);
+          setIsLoading(false);
+        })
+        .catch(err => {
+          console.error('Failed to fetch testing nodes:', err);
+          setError('Failed to load testing nodes');
+          setIsLoading(false);
+        });
+    }
+  }, [isOpen, testingNodes.length]);
 
   if (!isOpen) return null;
 
-  const coreNodes = [
-    {
-      id: 'prompt-inject',
-      title: 'Prompt Inject',
-      description: 'Inject prompts into the workflow',
-      icon: '💬',
-      color: 'bg-gray-50'
-    }
-  ];
-
-  const allNodes = coreNodes;
+  const allNodes = testingNodes.map(template => ({
+    id: template.node_type,
+    title: template.display_name,
+    description: template.description,
+    icon: template.icon,
+    nodeType: template.node_type,
+    color: 'bg-gray-50'
+  }));
 
   const filteredNodes = searchQuery
     ? allNodes.filter(node =>
@@ -51,7 +71,17 @@ export default function NodeDirectory({ isOpen, onClose, onNodeAdd }: NodeDirect
       {/* Nodes List */}
       <div className="overflow-y-auto max-h-[calc(60vh-200px)] top-20">
         <div className="p-2">
-          {filteredNodes.map((node) => (
+          {isLoading && (
+            <div className="text-center p-4 text-gray-500">
+              Loading testing nodes...
+            </div>
+          )}
+          {error && (
+            <div className="text-center p-4 text-red-500">
+              {error}
+            </div>
+          )}
+          {!isLoading && !error && filteredNodes.map((node) => (
             <button
               key={node.id}
               onClick={() => {
@@ -59,7 +89,9 @@ export default function NodeDirectory({ isOpen, onClose, onNodeAdd }: NodeDirect
                   id: node.id,
                   title: node.title,
                   icon: node.icon,
-                  type: 'badge' in node ? 'integration' : 'core'
+                  type: 'testing',
+                  description: node.description,
+                  nodeType: node.nodeType
                 });
               }}
               className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors text-left border border-transparent hover:border-gray-200 mb-1"

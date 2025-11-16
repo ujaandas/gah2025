@@ -1,9 +1,10 @@
-import type { Node } from 'reactflow';
+import type { Node, Edge } from 'reactflow';
 
 interface GraphControlsProps {
   selectedNode: Node | null;
   draggedNode: Node | null;
   hoveredEdge: string | null;
+  edges: Edge[];
   onAddNodeClick: () => void;
   onDeleteNode: () => void;
 }
@@ -15,9 +16,15 @@ export default function GraphControls({
   selectedNode,
   draggedNode,
   hoveredEdge,
+  edges,
   onAddNodeClick,
   onDeleteNode,
 }: GraphControlsProps) {
+  // Check if draggedNode is already part of the graph
+  const isNodeConnected = draggedNode 
+    ? edges.some(e => e.target === draggedNode.id) && edges.some(e => e.source === draggedNode.id)
+    : false;
+
   return (
     <>
       {/* Floating Add Node Button */}
@@ -46,8 +53,8 @@ export default function GraphControls({
         </div>
       )}
 
-      {/* Drag and Drop Hint */}
-      {draggedNode && (
+      {/* Drag and Drop Hint - only show if node is not yet connected */}
+      {draggedNode && !isNodeConnected && (
         <div className="fixed top-44 right-8 bg-blue-50 border-2 border-blue-300 rounded-lg shadow-lg p-4 z-[1000]">
           <p className="text-sm font-semibold text-blue-700 flex items-center gap-2">
             <span>💡</span>

@@ -15,7 +15,6 @@ export interface ExecutionLog {
 export function useGraphEditor() {
   const [isDirectoryOpen, setIsDirectoryOpen] = useState(false);
   const [isLogPanelOpen, setIsLogPanelOpen] = useState(false);
-  const [promptData, setPromptData] = useState<Record<string, string>>({});
   const [nodeCounter, setNodeCounter] = useState<Record<string, number>>({});
   const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
   const [isExecuting, setIsExecuting] = useState(false);
@@ -36,26 +35,17 @@ export function useGraphEditor() {
     setExecutionLogs([]);
   }, []);
 
-  // Handler for updating prompt data
-  const handlePromptChange = useCallback((nodeId: string, prompt: string) => {
-    setPromptData((prev) => {
-      const updated = { ...prev, [nodeId]: prompt };
-      return updated;
-    });
-  }, []);
-
-  // Find execution layers - groups of nodes that can run concurrently
-  const getExecutionLayers = useCallback((nodes: Node[], edges: Edge[]): string[][] => {
-    // Find the start node
-    const startNode = nodes.find(n => n.id === '__start__');
-    if (!startNode) {
-      addLog({ level: 'error', message: 'No start node found in graph', source: 'system' });
-      return [];
-    }
-
+  // Execution layers for supervisor pattern
+  const getSupervisorExecutionLayers = useCallback((
+    nodes: Node[], 
+    edges: Edge[], 
+    startNode: Node, 
+    supervisorNode: Node,
+    addLog: (log: { level: string; message: string; source?: string }) => void
+  ): string[][] => {
     const layers: string[][] = [];
+    const endNode = nodes.find(n => n.id === '__end__');
     
-    // For supervisor pattern with cycles, we need a specific execution plan
     // Layer 1: Start node
     layers.push([startNode.id]);
     
@@ -67,32 +57,122 @@ export function useGraphEditor() {
       layers.push(fromStart);
     }
     
-    // Layer 3: Find all agent nodes (nodes that are not start, end, or supervisor)
-    const supervisorNode = nodes.find(n => n.id === 'supervisor');
-    const endNode = nodes.find(n => n.id === '__end__');
+    // Layer 3: Find all agent nodes (nodes with conditional edges from supervisor)
+    const agentNodes = edges
+      .filter(e => {
+        const isConditional = e.conditional || e.data?.conditional;
+        return e.source === 'supervisor' && isConditional && e.target !== '__end__';
+      })
+      .map(e => e.target);
     
-    if (supervisorNode) {
-      // Find all outgoing conditional edges from supervisor (these are the agents)
-      const agentNodes = edges
-        .filter(e => e.source === 'supervisor' && e.data?.conditional && e.target !== '__end__')
-        .map(e => e.target);
+    if (agentNodes.length > 0) {
+      layers.push(agentNodes); // Agents run concurrently
       
-      if (agentNodes.length > 0) {
-        layers.push(agentNodes); // Agents run concurrently
-        
-        // Layer 4: Supervisor again (to collect results)
-        layers.push(['supervisor']);
-      }
-      
-      // Layer 5: End node
-      if (endNode) {
-        layers.push([endNode.id]);
-      }
+      // Layer 4: Supervisor again (to collect results)
+      layers.push(['supervisor']);
+    }
+    
+    // Layer 5: End node
+    if (endNode) {
+      layers.push([endNode.id]);
     }
 
-    console.log('Execution layers:', layers);
+    console.log('[getSupervisorExecutionLayers] Execution layers:', layers);
     return layers;
-  }, [addLog]);
+  }, []);
+
+  // Execution layers for sequential/DAG graphs using topological sort
+  const getTopologicalExecutionLayers = useCallback((
+    nodes: Node[], 
+    edges: Edge[], 
+    startNode: Node,
+    addLog: (log: { level: string; message: string; source?: string }) => void
+  ): string[][] => {
+    const layers: string[][] = [];
+    const nodeIds = new Set(nodes.map(n => n.id));
+    const visited = new Set<string>();
+    const inDegree = new Map<string, number>();
+    
+    // Calculate in-degree for each node
+    nodeIds.forEach(id => inDegree.set(id, 0));
+    edges.forEach(edge => {
+      if (nodeIds.has(edge.target)) {
+        inDegree.set(edge.target, (inDegree.get(edge.target) || 0) + 1);
+      }
+    });
+    
+    console.log('[getTopologicalExecutionLayers] In-degrees:', Object.fromEntries(inDegree));
+    
+    // Process nodes layer by layer
+    let currentLayer = [startNode.id];
+    
+    while (currentLayer.length > 0) {
+      layers.push([...currentLayer]);
+      currentLayer.forEach(nodeId => visited.add(nodeId));
+      
+      // Find next layer: nodes whose all predecessors have been visited
+      const nextLayer = new Set<string>();
+      
+      currentLayer.forEach(nodeId => {
+        // Find all nodes that this node connects to
+        const outgoingEdges = edges.filter(e => e.source === nodeId);
+        outgoingEdges.forEach(edge => {
+          const targetId = edge.target;
+          if (!visited.has(targetId) && nodeIds.has(targetId)) {
+            // Check if all predecessors of targetId have been visited
+            const predecessors = edges.filter(e => e.target === targetId);
+            const allPredecessorsVisited = predecessors.every(e => visited.has(e.source));
+            
+            if (allPredecessorsVisited) {
+              nextLayer.add(targetId);
+            }
+          }
+        });
+      });
+      
+      currentLayer = Array.from(nextLayer);
+    }
+    
+    // Check if all nodes were visited
+    if (visited.size < nodeIds.size) {
+      const unvisited = Array.from(nodeIds).filter(id => !visited.has(id));
+      console.warn('[getTopologicalExecutionLayers] Some nodes were not reached:', unvisited);
+      addLog({ 
+        level: 'warning', 
+        message: `Some nodes are not connected to the start node: ${unvisited.join(', ')}`, 
+        source: 'system' 
+      });
+    }
+    
+    console.log('[getTopologicalExecutionLayers] Execution layers:', layers);
+    return layers;
+  }, []);
+
+  // Find execution layers - groups of nodes that can run concurrently
+  const getExecutionLayers = useCallback((nodes: Node[], edges: Edge[]): string[][] => {
+    console.log('[getExecutionLayers] Finding execution order for nodes:', nodes.map(n => n.id));
+    console.log('[getExecutionLayers] Edges:', edges.map(e => `${e.source} -> ${e.target}`));
+    
+    // Find the start node
+    const startNode = nodes.find(n => n.id === '__start__');
+    if (!startNode) {
+      addLog({ level: 'error', message: 'No start node found in graph', source: 'system' });
+      return [];
+    }
+
+    // Check if this is a supervisor pattern (has 'supervisor' node with conditional edges)
+    const supervisorNode = nodes.find(n => n.id === 'supervisor');
+    const hasConditionalEdges = edges.some(e => e.conditional || e.data?.conditional);
+    
+    if (supervisorNode && hasConditionalEdges) {
+      console.log('[getExecutionLayers] Detected supervisor pattern');
+      return getSupervisorExecutionLayers(nodes, edges, startNode, supervisorNode, addLog);
+    }
+    
+    // Otherwise, use topological sort for sequential/DAG execution
+    console.log('[getExecutionLayers] Using topological sort for sequential execution');
+    return getTopologicalExecutionLayers(nodes, edges, startNode, addLog);
+  }, [addLog, getSupervisorExecutionLayers, getTopologicalExecutionLayers]);
 
   // Handler for run button - Mock execution
   const handleRun = useCallback(async (
@@ -100,14 +180,25 @@ export function useGraphEditor() {
     allNodes: Node[],
     allEdges: Edge[]
   ) => {
+    console.log('[useGraphEditor] handleRun called');
+    console.log('[useGraphEditor] isExecuting:', isExecuting);
+    console.log('[useGraphEditor] allNodes:', allNodes);
+    console.log('[useGraphEditor] allEdges:', allEdges);
+    
+    // Prevent concurrent executions
     if (isExecuting) {
-      addLog({ level: 'warning', message: 'Execution already in progress', source: 'system' });
+      console.warn('[useGraphEditor] Execution already in progress - blocking concurrent run');
+      addLog({ level: 'warning', message: 'Execution already in progress. Please wait for current execution to complete.', source: 'system' });
       return;
     }
+    
+    console.log('[useGraphEditor] Starting new execution...');
 
     // Simulate node execution
     const executeNode = async (node: Node): Promise<boolean> => {
       const nodeName = node.data.label?.props?.children?.[1]?.props?.children || node.data.title || node.id;
+      
+      console.log(`[useGraphEditor] Executing node: ${nodeName} (${node.id})`);
       
       // Add to executing nodes
       setExecutingNodeIds(prev => [...prev, node.id]);
@@ -176,14 +267,13 @@ export function useGraphEditor() {
 
       // Remove from executing nodes
       setExecutingNodeIds(prev => prev.filter(id => id !== node.id));
+      console.log(`[useGraphEditor] Completed execution of node: ${nodeName}`);
       return true;
     };
 
+    console.log('[useGraphEditor] Setting isExecuting to true');
     setIsExecuting(true);
     clearLogs();
-    
-    // Open log panel to show execution progress
-    setIsLogPanelOpen(true);
     
     addLog({
       level: 'info',
@@ -201,14 +291,18 @@ export function useGraphEditor() {
       source: 'system',
     });
 
+    console.log('[useGraphEditor] Getting execution layers...');
     // Get execution layers
     const executionLayers = getExecutionLayers(allNodes, allEdges);
     
     if (executionLayers.length === 0) {
+      console.error('[useGraphEditor] Failed to determine execution order');
       addLog({ level: 'error', message: 'Failed to determine execution order', source: 'system' });
       setIsExecuting(false);
       return;
     }
+    
+    console.log('[useGraphEditor] Execution layers:', executionLayers);
 
     const totalNodes = executionLayers.reduce((sum, layer) => sum + layer.length, 0);
     addLog({
@@ -223,6 +317,7 @@ export function useGraphEditor() {
     // Execute nodes layer by layer
     for (let layerIndex = 0; layerIndex < executionLayers.length; layerIndex++) {
       const layer = executionLayers[layerIndex];
+      console.log(`[useGraphEditor] Executing layer ${layerIndex + 1}/${executionLayers.length}:`, layer);
       
       if (layer.length === 1) {
         // Single node in layer - execute sequentially
@@ -300,12 +395,13 @@ export function useGraphEditor() {
       source: 'system',
     });
 
+    console.log('[useGraphEditor] Execution completed, setting isExecuting to false');
     setIsExecuting(false);
-  }, [isExecuting, addLog, clearLogs, getExecutionLayers]);
+  }, [isExecuting, addLog, clearLogs, getExecutionLayers, getSupervisorExecutionLayers, getTopologicalExecutionLayers]);
 
   // Handler for adding nodes
   const handleNodeAdd = useCallback((
-    nodeData: { id: string; title: string; icon: string; type: string },
+    nodeData: { id: string; title: string; icon: string; type: string; description?: string; nodeType?: string },
     setNodes: (callback: (nodes: Node[]) => Node[]) => void
   ) => {
     const currentCount = nodeCounter[nodeData.id] || 1;
@@ -316,7 +412,8 @@ export function useGraphEditor() {
       [nodeData.id]: currentCount + 1
     }));
 
-    if (nodeData.id === 'prompt-inject') {
+    // Check if it's a testing node (prompt injection or other testing types)
+    if (nodeData.type === 'testing' || nodeData.id === 'prompt-inject' || nodeData.nodeType === 'prompt_injection') {
       const newNode: Node = {
         id: nodeId,
         type: 'promptInject',
@@ -327,8 +424,7 @@ export function useGraphEditor() {
         data: {
           icon: nodeData.icon,
           title: nodeData.title,
-          prompt: '',
-          onPromptChange: handlePromptChange,
+          nodeType: nodeData.nodeType || nodeData.id, // Store the node type for API calls
         },
         draggable: true,
       };
@@ -352,22 +448,20 @@ export function useGraphEditor() {
       };
       setNodes((nds) => [...nds, newNode]);
     }
-  }, [handlePromptChange, nodeCounter, setNodeCounter]);
+  }, [nodeCounter, setNodeCounter]);
 
   return {
     isDirectoryOpen,
     setIsDirectoryOpen,
     isLogPanelOpen,
     setIsLogPanelOpen,
-    promptData,
-    setPromptData,
-    handlePromptChange,
     handleRun,
     handleNodeAdd,
     executionLogs,
     isExecuting,
     executingNodeIds,
     clearLogs,
+    addLog,
   };
 }
 

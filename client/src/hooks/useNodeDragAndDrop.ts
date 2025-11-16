@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import type { Node, Edge } from 'reactflow';
 import { distanceToLineSegment, isVerticalEdge, getMidpoint } from '@/lib/utils/geometry';
 import { findDownstreamNodes, findUpstreamNodes } from '@/lib/utils/graphTraversal';
+import { graphApiClient } from '@/lib/api/graphApi';
 
 /**
  * Hook to handle drag and drop of nodes onto edges
@@ -12,23 +13,18 @@ export function useNodeDragAndDrop(
   initialEdges: Edge[],
   setNodes: (callback: (nodes: Node[]) => Node[]) => void,
   setEdges: (callback: (edges: Edge[]) => Edge[]) => void,
-  fitView: (options?: any) => void
+  fitView: (options?: any) => void,
+  graphId: string | null,
+  addLog?: (log: { level: 'info' | 'warning' | 'error' | 'success'; message: string; source?: string }) => void
 ) {
   const [draggedNode, setDraggedNode] = useState<Node | null>(null);
   const [hoveredEdge, setHoveredEdge] = useState<string | null>(null);
 
   const onNodeDragStart = useCallback((_event: React.MouseEvent, node: Node) => {
     if (node.type === 'promptInject') {
-      // Check if the node is already part of the graph
-      const hasIncomingEdge = edges.some(e => e.target === node.id);
-      const hasOutgoingEdge = edges.some(e => e.source === node.id);
-      
-      // Only allow dragging if not connected
-      if (!hasIncomingEdge || !hasOutgoingEdge) {
-        setDraggedNode(node);
-      }
+      setDraggedNode(node);
     }
-  }, [edges]);
+  }, []);
 
   const onNodeDrag = useCallback((_event: React.MouseEvent, node: Node) => {
     if (node.type !== 'promptInject') return;
@@ -37,8 +33,10 @@ export function useNodeDragAndDrop(
     const hasIncomingEdge = edges.some(e => e.target === node.id);
     const hasOutgoingEdge = edges.some(e => e.source === node.id);
     
+    // If node is already connected, don't allow dropping on edges
     if (hasIncomingEdge && hasOutgoingEdge) {
-      return; // Node is locked
+      setHoveredEdge(null);
+      return;
     }
 
     // Get the position of the dragged node
@@ -47,10 +45,13 @@ export function useNodeDragAndDrop(
       y: node.position.y + 25
     };
 
-    // Check if the node is over any edge
+    // Check if the node is over any edge (excluding edges connected to this node)
     let foundEdge: string | null = null;
     
     for (const edge of edges) {
+      // Skip edges that are already connected to this node
+      if (edge.source === node.id || edge.target === node.id) continue;
+      
       const sourceNode = nodes.find(n => n.id === edge.source);
       const targetNode = nodes.find(n => n.id === edge.target);
       
@@ -73,8 +74,19 @@ export function useNodeDragAndDrop(
     setHoveredEdge(foundEdge);
   }, [nodes, edges]);
 
-  const onNodeDragStop = useCallback((_event: React.MouseEvent, node: Node) => {
+  const onNodeDragStop = useCallback(async (_event: React.MouseEvent, node: Node) => {
     if (node.type !== 'promptInject' || !hoveredEdge) {
+      setDraggedNode(null);
+      setHoveredEdge(null);
+      return;
+    }
+
+    // Check if node is already part of the graph
+    const hasIncomingEdge = edges.some(e => e.target === node.id);
+    const hasOutgoingEdge = edges.some(e => e.source === node.id);
+    
+    // If node is already connected, don't allow dropping on edges
+    if (hasIncomingEdge && hasOutgoingEdge) {
       setDraggedNode(null);
       setHoveredEdge(null);
       return;
@@ -123,7 +135,7 @@ export function useNodeDragAndDrop(
         return { 
           ...n, 
           position: newPosition,
-          draggable: false
+          draggable: true
         };
       } else if (upstreamNodes.has(n.id)) {
         if (isVertical) {
@@ -189,6 +201,68 @@ export function useNodeDragAndDrop(
       return [...filteredEdges, newEdge1, newEdge2];
     });
 
+    // Send API request to update the graph backend
+    if (graphId && node.data.nodeType) {
+      try {
+        const position = `after:${edge.source}`;
+        const nodeType = node.data.nodeType;
+        
+        if (addLog) {
+          addLog({
+            level: 'info',
+            message: `Adding testing node ${node.id} to graph...`,
+            source: 'API'
+          });
+        }
+        
+        const response = await graphApiClient.addTestingNode({
+          graph_id: graphId,
+          node_type: nodeType,
+          position: position,
+          name: node.id,
+          config: node.data.config || {}
+        });
+        
+        if (addLog) {
+          addLog({
+            level: 'success',
+            message: `Testing node added to backend: ${response.message}`,
+            source: 'API'
+          });
+        }
+        
+        console.log('Testing node added to backend:', response);
+      } catch (error) {
+        console.error('Failed to add testing node to backend:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        
+        if (addLog) {
+          if (errorMessage.includes('Graph not found')) {
+            addLog({
+              level: 'error',
+              message: `Graph not found in API. Please reload the page to get a fresh graph.`,
+              source: 'API'
+            });
+          } else {
+            addLog({
+              level: 'error',
+              message: `Failed to add testing node: ${errorMessage}`,
+              source: 'API'
+            });
+          }
+        }
+      }
+    } else {
+      console.warn('Cannot add testing node to backend: missing graphId or nodeType');
+      if (addLog && !graphId) {
+        addLog({
+          level: 'warning',
+          message: 'No graph loaded from API. Testing node added to UI only - please reload the page.',
+          source: 'API'
+        });
+      }
+    }
+
     // Fit view with animation
     setTimeout(() => {
       fitView({ 
@@ -199,7 +273,7 @@ export function useNodeDragAndDrop(
 
     setDraggedNode(null);
     setHoveredEdge(null);
-  }, [hoveredEdge, nodes, edges, setNodes, setEdges, fitView]);
+  }, [hoveredEdge, nodes, edges, setNodes, setEdges, fitView, graphId, addLog]);
 
   // Update edges to highlight when hovered
   useEffect(() => {

@@ -7,9 +7,7 @@ import type { Node, Edge } from 'reactflow';
 export function useNodeSelection(
   edges: Edge[],
   setNodes: (callback: (nodes: Node[]) => Node[]) => void,
-  setEdges: (callback: (edges: Edge[]) => Edge[]) => void,
-  promptData: Record<string, string>,
-  setPromptData: React.Dispatch<React.SetStateAction<Record<string, string>>>
+  setEdges: (callback: (edges: Edge[]) => Edge[]) => void
 ) {
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
 
@@ -53,17 +51,10 @@ export function useNodeSelection(
         ));
       }
       
-      // Clear prompt data for this node
-      setPromptData((prev) => {
-        const updated = { ...prev };
-        delete updated[selectedNode.id];
-        return updated;
-      });
-      
       setSelectedNode(null);
       console.log('Deleted node:', selectedNode.id);
     }
-  }, [selectedNode, edges, setNodes, setEdges, setPromptData]);
+  }, [selectedNode, edges, setNodes, setEdges]);
 
   return {
     selectedNode,

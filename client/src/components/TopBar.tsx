@@ -6,11 +6,17 @@ interface TopBarProps {
 }
 
 export default function TopBar({ onRun, isExecuting = false }: TopBarProps) {
+  const handleRunClick = () => {
+    console.log('[TopBar] Run button clicked');
+    console.log('[TopBar] isExecuting:', isExecuting);
+    onRun();
+  };
+
   return (
     <div className="absolute top-5 right-5 z-50">
       <div className="bg-white rounded-lg shadow-md px-4 py-2 flex items-center gap-3 border border-gray-200">
         <button
-          onClick={onRun}
+          onClick={handleRunClick}
           disabled={isExecuting}
           className={`${
             isExecuting 
