@@ -76,8 +76,8 @@ async def create_attack_graph(request: AttackGraphCreateRequest):
             name=load_response.name,
             description=load_response.description,
             target_url=request.target_url,
-            structure=load_response.structure,
-            created_at=load_response.created_at,
+            structure=load_response.structure.model_dump(),  # Convert GraphStructure to dict
+            created_at=load_response.created_at.isoformat(),  # Convert datetime to string
         )
     
     except Exception as e:

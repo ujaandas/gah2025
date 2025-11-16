@@ -31,7 +31,7 @@ export default function HomePage() {
   return (
     <div className="w-full">
       {/* Hero Section */}
-      <section className="relative py-20 px-6 overflow-hidden bg-linear-to-b from-zinc-50 to-white dark:from-zinc-950 dark:to-zinc-900">
+      <section className="relative py-20 px-6 overflow-hidden bg-gradient-to-b from-zinc-50 to-white dark:from-zinc-950 dark:to-zinc-900">
         {/* Animated background elements */}
         <div className="absolute inset-0 overflow-hidden">
           <FloatingElement delay={0} duration={4} className="absolute top-20 left-10">
@@ -58,7 +58,7 @@ export default function HomePage() {
           </FadeIn>
 
           <FadeIn delay={0.2} duration={0.8}>
-            <h1 className="text-6xl md:text-7xl font-bold text-center mb-6 bg-clip-text text-transparent bg-linear-to-r from-zinc-900 via-zinc-700 to-zinc-900 dark:from-zinc-50 dark:via-zinc-200 dark:to-zinc-50">
+            <h1 className="text-6xl md:text-7xl font-bold text-center mb-6 bg-clip-text text-transparent bg-gradient-to-r from-zinc-900 via-zinc-700 to-zinc-900 dark:from-zinc-50 dark:via-zinc-200 dark:to-zinc-50">
               Deploy Agentic AI
               <br />
               <span className="gradient-text">Safely & Confidently</span>
@@ -218,7 +218,7 @@ export default function HomePage() {
                   transition={{ duration: 0.6 }}
                   className="relative"
                 >
-                  <div className="aspect-video rounded-2xl bg-linear-to-br from-blue-500/10 to-cyan-500/10 dark:from-blue-500/20 dark:to-cyan-500/20 border border-zinc-200 dark:border-zinc-800 p-8 flex items-center justify-center">
+                  <div className="aspect-video rounded-2xl bg-gradient-to-br from-blue-500/10 to-cyan-500/10 dark:from-blue-500/20 dark:to-cyan-500/20 border border-zinc-200 dark:border-zinc-800 p-8 flex items-center justify-center">
                     <Network className="w-32 h-32 text-blue-500 dark:text-blue-400" />
                   </div>
                 </motion.div>
@@ -235,7 +235,7 @@ export default function HomePage() {
                   transition={{ duration: 0.6 }}
                   className="relative order-2 md:order-1"
                 >
-                  <div className="aspect-video rounded-2xl bg-linear-to-br from-red-500/10 to-orange-500/10 dark:from-red-500/20 dark:to-orange-500/20 border border-zinc-200 dark:border-zinc-800 p-8 flex items-center justify-center">
+                  <div className="aspect-video rounded-2xl bg-gradient-to-br from-red-500/10 to-orange-500/10 dark:from-red-500/20 dark:to-orange-500/20 border border-zinc-200 dark:border-zinc-800 p-8 flex items-center justify-center">
                     <Target className="w-32 h-32 text-red-500 dark:text-red-400" />
                   </div>
                 </motion.div>
@@ -292,7 +292,7 @@ export default function HomePage() {
                   transition={{ duration: 0.6 }}
                   className="relative"
                 >
-                  <div className="aspect-video rounded-2xl bg-linear-to-br from-green-500/10 to-emerald-500/10 dark:from-green-500/20 dark:to-emerald-500/20 border border-zinc-200 dark:border-zinc-800 p-8 flex items-center justify-center">
+                  <div className="aspect-video rounded-2xl bg-gradient-to-br from-green-500/10 to-emerald-500/10 dark:from-green-500/20 dark:to-emerald-500/20 border border-zinc-200 dark:border-zinc-800 p-8 flex items-center justify-center">
                     <Zap className="w-32 h-32 text-green-500 dark:text-green-400" />
                   </div>
                 </motion.div>
@@ -309,7 +309,7 @@ export default function HomePage() {
                   transition={{ duration: 0.6 }}
                   className="relative order-2 md:order-1"
                 >
-                  <div className="aspect-video rounded-2xl bg-linear-to-br from-purple-500/10 to-pink-500/10 dark:from-purple-500/20 dark:to-pink-500/20 border border-zinc-200 dark:border-zinc-800 p-8 flex items-center justify-center">
+                  <div className="aspect-video rounded-2xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 dark:from-purple-500/20 dark:to-pink-500/20 border border-zinc-200 dark:border-zinc-800 p-8 flex items-center justify-center">
                     <FileText className="w-32 h-32 text-purple-500 dark:text-purple-400" />
                   </div>
                 </motion.div>
@@ -342,7 +342,7 @@ export default function HomePage() {
       </section>
 
       {/* Attack Mode Section */}
-      <section className="py-20 px-6 bg-linear-to-b from-red-50 to-orange-50 dark:from-red-950/20 dark:to-orange-950/20">
+      <section className="py-20 px-6 bg-gradient-to-b from-red-50 to-orange-50 dark:from-red-950/20 dark:to-orange-950/20">
         <div className="max-w-5xl mx-auto">
           <FadeIn>
             <div className="text-center mb-12">
@@ -446,7 +446,7 @@ export default function HomePage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-6 bg-linear-to-br from-violet-600 to-purple-700 text-white">
+      <section className="py-20 px-6 bg-gradient-to-br from-violet-600 to-purple-700 text-white">
         <div className="max-w-4xl mx-auto text-center">
           <FadeIn>
             <h2 className="text-4xl md:text-5xl font-bold mb-6">

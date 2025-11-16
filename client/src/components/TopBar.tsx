@@ -1,15 +1,22 @@
 "use client";
 
 import { Button } from './ui/button';
-import { Play, Loader2 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Play, Loader2, Sparkles } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface TopBarProps {
   onRun: () => void;
   isExecuting?: boolean;
+  onViewAnalysis?: () => void;
+  hasExecutionCompleted?: boolean;
 }
 
-export default function TopBar({ onRun, isExecuting = false }: TopBarProps) {
+export default function TopBar({ 
+  onRun, 
+  isExecuting = false, 
+  onViewAnalysis,
+  hasExecutionCompleted = false 
+}: TopBarProps) {
   const handleRunClick = () => {
     console.log('[TopBar] Run button clicked');
     console.log('[TopBar] isExecuting:', isExecuting);
@@ -48,6 +55,27 @@ export default function TopBar({ onRun, isExecuting = false }: TopBarProps) {
             </>
           )}
         </Button>
+
+        {/* View Analysis Button - shows after execution */}
+        <AnimatePresence>
+          {hasExecutionCompleted && onViewAnalysis && !isExecuting && (
+            <motion.div
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+            >
+              <Button
+                onClick={onViewAnalysis}
+                size="sm"
+                className="rounded-lg px-6 py-2 font-medium bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                <span>View Analysis</span>
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   );

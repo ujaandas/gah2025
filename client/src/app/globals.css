@@ -79,11 +79,24 @@ body {
   color: rgb(250 250 250);
 }
 
-/* Smooth transitions for theme changes */
-* {
-  transition-property: background-color, border-color, color, fill, stroke;
-  transition-duration: 200ms;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+/* Smooth transitions for theme changes - only after page is loaded to prevent hydration mismatch */
+@media (prefers-reduced-motion: no-preference) {
+  :root {
+    --transition-duration: 200ms;
+  }
+  
+  body,
+  body * {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-duration: var(--transition-duration);
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* Disable transitions on page load to prevent hydration issues */
+  body.loading *,
+  body.loading {
+    transition: none !important;
+  }
 }
 
 /* Custom scrollbar */

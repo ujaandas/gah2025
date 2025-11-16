@@ -40,15 +40,13 @@ class TestingService:
                 icon="⚠️",
                 default_config={
                     "use_mock": False,
-                    "ollama_base_url": "http://localhost:11434",
-                    "ollama_model": "dolphin-phi",
+                    "llm_model": None,  # Uses default fast model if None
                     "state_prompt_key": "prompt",
                     "state_output_key": "injected_prompt",
                 },
                 config_schema={
-                    "use_mock": {"type": "boolean", "description": "Use mock injection instead of Ollama"},
-                    "ollama_base_url": {"type": "string", "description": "Base URL for Ollama API"},
-                    "ollama_model": {"type": "string", "description": "Model to use for injection"},
+                    "use_mock": {"type": "boolean", "description": "Use mock injection instead of LLM API"},
+                    "llm_model": {"type": "string", "description": "LLM model to use (e.g., Claude, Llama). Uses default if not specified."},
                     "state_prompt_key": {"type": "string", "description": "State key to read prompt from"},
                     "state_output_key": {"type": "string", "description": "State key to write injected prompt to"},
                 },
@@ -155,10 +153,8 @@ class TestingService:
         if isinstance(testing_node, PromptInjectionNode):
             if "use_mock" in request.config:
                 testing_node.use_mock = request.config["use_mock"]
-            if "ollama_model" in request.config:
-                testing_node.ollama_model = request.config["ollama_model"]
-            if "ollama_base_url" in request.config:
-                testing_node.ollama_base_url = request.config["ollama_base_url"]
+            if "llm_model" in request.config:
+                testing_node.llm_model = request.config["llm_model"]
 
         return TestingNodeConfigResponse(
             node_id=node_id,
@@ -179,8 +175,7 @@ class TestingService:
                 node_id=node_id,
                 name=request.name or "prompt_injection",
                 use_mock=config.get("use_mock", False),
-                ollama_base_url=config.get("ollama_base_url", "http://localhost:11434"),
-                ollama_model=config.get("ollama_model", "dolphin-phi"),
+                llm_model=config.get("llm_model"),  # None uses default model
                 state_prompt_key=config.get("state_prompt_key", "prompt"),
                 state_output_key=config.get("state_output_key", "injected_prompt"),
             )

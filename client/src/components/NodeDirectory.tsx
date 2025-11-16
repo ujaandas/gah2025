@@ -73,7 +73,7 @@ export default function NodeDirectory({ isOpen, onClose, onNodeAdd }: NodeDirect
             className="fixed left-8 top-40 w-96 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden z-101"
           >
             {/* Header */}
-            <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 bg-linear-to-r from-violet-50 to-purple-50 dark:from-violet-950/30 dark:to-purple-950/30">
+            <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-950/30 dark:to-purple-950/30">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
                   Add Test Node

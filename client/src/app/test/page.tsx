@@ -18,6 +18,7 @@ import PromptInjectNode from '@/components/PromptInjectNode';
 import GraphCanvas from '@/components/GraphCanvas';
 import GraphControls from '@/components/GraphControls';
 import NodeDataPanel from '@/components/NodeDataPanel';
+import AnalysisPanel from '@/components/AnalysisPanel';
 import { motion } from 'framer-motion';
 
 import { mockGraphStructure } from '@/lib/data/mockGraphData';
@@ -41,6 +42,10 @@ function GraphEditor() {
   const [currentGraphId, setCurrentGraphId] = useState<string | null>(null);
   const [isNodeDataPanelOpen, setIsNodeDataPanelOpen] = useState(false);
   const [selectedNodeForData, setSelectedNodeForData] = useState<{ id: string; name: string } | null>(null);
+  
+  // Analysis panel state
+  const [isAnalysisPanelOpen, setIsAnalysisPanelOpen] = useState(false);
+  const [lastExecutionId, setLastExecutionId] = useState<string | null>(null);
 
   // Custom hooks for managing state and behavior
   const {
@@ -56,7 +61,17 @@ function GraphEditor() {
     completedNodeIds,
     clearLogs,
     addLog,
+    lastExecutionId: hookLastExecutionId,
   } = useGraphEditor();
+
+  // Update execution ID when available from hook and auto-open analysis panel
+  useEffect(() => {
+    if (hookLastExecutionId && hookLastExecutionId !== lastExecutionId) {
+      setLastExecutionId(hookLastExecutionId);
+      // Automatically open analysis panel after execution completes
+      setIsAnalysisPanelOpen(true);
+    }
+  }, [hookLastExecutionId, lastExecutionId]);
 
   const {
     selectedNode,
@@ -412,9 +427,15 @@ function GraphEditor() {
           console.log('[Page] Number of nodes:', nodes.length);
           console.log('[Page] Number of edges:', edges.length);
           console.log('[Page] Current graph ID:', currentGraphId);
-          handleRun(selectedNode, nodes, edges, currentGraphId);
+          handleRun(selectedNode, nodes, edges, currentGraphId, (executionId) => {
+            console.log('[Test Page] Execution completed with ID:', executionId);
+            setLastExecutionId(executionId);
+            setIsAnalysisPanelOpen(true);
+          });
         }} 
         isExecuting={isExecuting}
+        onViewAnalysis={() => setIsAnalysisPanelOpen(true)}
+        hasExecutionCompleted={!!lastExecutionId}
       />
 
       {/* Node Directory Modal */}
@@ -440,6 +461,22 @@ function GraphEditor() {
         graphId={currentGraphId}
         onClose={() => setIsNodeDataPanelOpen(false)}
         onFetchData={handleFetchNodeData}
+      />
+
+      {/* Analysis Panel */}
+      <AnalysisPanel
+        isOpen={isAnalysisPanelOpen}
+        onClose={() => setIsAnalysisPanelOpen(false)}
+        graphId={currentGraphId}
+        executionId={lastExecutionId}
+        onAnalysisGenerated={(analysis) => {
+          console.log('[Test Page] Analysis generated:', analysis);
+          addLog({
+            level: 'success',
+            message: `AI Analysis complete: Risk Score ${analysis.risk_score}/100`,
+            source: 'Analysis'
+          });
+        }}
       />
     </div>
   );

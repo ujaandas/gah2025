@@ -15,6 +15,7 @@ interface ReactFlowGraph {
  * Convert API graph structure to React Flow nodes and edges
  */
 export function convertApiGraphToReactFlow(graphStructure: GraphStructure): ReactFlowGraph {
+  console.log('[apiGraphConverter] Input structure:', graphStructure);
   const nodes: Node[] = [];
   const edges: Edge[] = [];
 
@@ -22,26 +23,25 @@ export function convertApiGraphToReactFlow(graphStructure: GraphStructure): Reac
   const filteredNodeEntries = Object.entries(graphStructure.nodes).filter(
     ([nodeId]) => nodeId !== '__start__' && nodeId !== '__end__'
   );
+  console.log('[apiGraphConverter] Filtered node entries:', filteredNodeEntries);
 
   // Convert nodes
   filteredNodeEntries.forEach(([nodeId, nodeInfo], index) => {
     const icon = nodeInfo.metadata?.icon || '📦';
-    const isStart = nodeInfo.node_type === 'start';
-    const isEnd = nodeInfo.node_type === 'end';
+    const isStart = nodeInfo.node_type === 'start' || nodeInfo.name === 'start';
+    const isEnd = nodeInfo.node_type === 'end' || nodeInfo.name === 'end';
 
-    // Calculate position in a circular layout
-    const totalNodes = filteredNodeEntries.length;
-    const angle = (index / totalNodes) * 2 * Math.PI;
-    const radius = 300;
-    const centerX = 400;
-    const centerY = 300;
+    // Use horizontal layout for better visibility
+    const spacing = 250;
+    const startX = 100;
+    const startY = 200;
 
     nodes.push({
       id: nodeId,
       type: 'default',
       position: {
-        x: centerX + radius * Math.cos(angle),
-        y: centerY + radius * Math.sin(angle),
+        x: startX + (index * spacing),
+        y: startY,
       },
       data: {
         label: `${icon} ${nodeInfo.name}`,
@@ -55,7 +55,7 @@ export function convertApiGraphToReactFlow(graphStructure: GraphStructure): Reac
           ? '#fee2e2'
           : nodeInfo.is_testing
           ? '#fef3c7'
-          : '#f3f4f6',
+          : '#ffffff',
         border: '2px solid',
         borderColor: isStart
           ? '#22c55e'
@@ -64,10 +64,20 @@ export function convertApiGraphToReactFlow(graphStructure: GraphStructure): Reac
           : nodeInfo.is_testing
           ? '#f59e0b'
           : '#9ca3af',
-        padding: '10px',
+        padding: '12px 20px',
         borderRadius: '8px',
         fontSize: '14px',
+        width: 180,
+        height: 60,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#1f2937',
+        fontWeight: 600,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
       },
+      width: 180,
+      height: 60,
     });
   });
 
@@ -102,6 +112,8 @@ export function convertApiGraphToReactFlow(graphStructure: GraphStructure): Reac
     });
   });
 
+  console.log('[apiGraphConverter] Final result - Nodes:', nodes.length, nodes);
+  console.log('[apiGraphConverter] Final result - Edges:', edges.length, edges);
   return { nodes, edges };
 }
 

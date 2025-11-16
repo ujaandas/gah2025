@@ -2,6 +2,9 @@
 
 import uuid
 import time
+import sys
+import json
+from pathlib import Path
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 
@@ -13,7 +16,20 @@ from models.analysis import (
     Vulnerability,
     VulnerabilitySeverity,
     ExportFormat,
+    LLMAnalysisRequest,
+    LLMAnalysisResponse,
 )
+
+# Add backend to path for LLM client
+backend_dir = Path(__file__).parent.parent.parent / "backend"
+sys.path.insert(0, str(backend_dir))
+
+try:
+    from llm_client import get_llm_client
+    LLM_AVAILABLE = True
+except ImportError:
+    LLM_AVAILABLE = False
+    print("Warning: LLM client not available. LLM analysis will be disabled.")
 
 
 class AnalysisService:
@@ -22,6 +38,7 @@ class AnalysisService:
     def __init__(self):
         self.test_suites: Dict[str, Dict[str, Any]] = {}  # suite_id -> suite data
         self.vulnerability_reports: Dict[str, VulnerabilityReport] = {}  # graph_id -> report
+        self.llm_analyses: Dict[str, LLMAnalysisResponse] = {}  # analysis_id -> analysis
 
     def run_test_suite(
         self,
@@ -370,6 +387,163 @@ class AnalysisService:
             recommendations.append("Log detailed errors securely without exposing to users")
         
         return recommendations
+
+    def generate_llm_analysis(
+        self,
+        request: LLMAnalysisRequest,
+        execution_service,
+        graph_service
+    ) -> LLMAnalysisResponse:
+        """Generate LLM-powered analysis of execution results."""
+        if not LLM_AVAILABLE:
+            raise RuntimeError("LLM client is not available. Please check backend configuration.")
+        
+        analysis_id = str(uuid.uuid4())
+        
+        # Get execution data
+        execution = execution_service.executions.get(request.execution_id)
+        if not execution:
+            raise ValueError(f"Execution not found: {request.execution_id}")
+        
+        # Get graph data
+        graph = graph_service.get_graph(request.graph_id)
+        if not graph:
+            raise ValueError(f"Graph not found: {request.graph_id}")
+        
+        # Prepare execution summary for LLM
+        execution_summary = {
+            "graph_name": graph.name,
+            "graph_description": graph.description,
+            "execution_id": request.execution_id,
+            "status": execution.get("status"),
+            "final_state": execution.get("final_state", {}),
+            "steps": []
+        }
+        
+        # Add step information
+        for step in execution.get("steps", []):
+            execution_summary["steps"].append({
+                "node_id": step.get("node_id"),
+                "status": step.get("status"),
+                "output": step.get("output"),
+                "error": step.get("error"),
+            })
+        
+        # Build prompt for LLM
+        focus_areas_str = ""
+        if request.focus_areas:
+            focus_areas_str = f"\n\nPlease focus particularly on: {', '.join(request.focus_areas)}"
+        
+        prompt = f"""You are a security analyst reviewing the execution of an AI agent graph. 
+Analyze the following execution data and provide detailed insights.
+
+GRAPH INFORMATION:
+- Name: {graph.name}
+- Description: {graph.description}
+
+EXECUTION DATA:
+{json.dumps(execution_summary, indent=2)}
+
+Please provide:
+1. A concise summary (2-3 sentences) of what happened during execution
+2. A list of any vulnerabilities or security issues detected (be specific)
+3. Security concerns and risks
+4. Recommendations for improvement
+5. A detailed analysis of the execution flow and any anomalies
+6. A risk score from 0-100 (0 = no risk, 100 = critical risk)
+
+{focus_areas_str}
+
+Format your response as JSON with the following structure:
+{{
+    "summary": "brief summary here",
+    "vulnerabilities": ["vulnerability 1", "vulnerability 2"],
+    "security_issues": ["issue 1", "issue 2"],
+    "recommendations": ["recommendation 1", "recommendation 2"],
+    "detailed_analysis": "detailed analysis here",
+    "risk_score": 0-100
+}}
+
+Be thorough but concise. Focus on actionable insights."""
+
+        try:
+            # Call LLM
+            print(f"DEBUG: Getting LLM client with force_new=True...")
+            llm_client = get_llm_client(force_new=True)  # Force new instance to avoid caching
+            print(f"DEBUG: LLM client obtained. Team ID: {llm_client.team_id}")
+            print(f"DEBUG: Calling LLM with prompt length: {len(prompt)}")
+            llm_response = llm_client.call(
+                prompt=prompt,
+                max_tokens=2048,
+                temperature=0.3  # Lower temperature for more consistent analysis
+            )
+            print(f"DEBUG: LLM response received: {len(llm_response)} chars")
+            
+            # Parse LLM response
+            # Try to extract JSON from the response
+            import re
+            json_match = re.search(r'\{[\s\S]*\}', llm_response)
+            if json_match:
+                analysis_data = json.loads(json_match.group())
+            else:
+                # Fallback if LLM didn't return proper JSON
+                analysis_data = {
+                    "summary": "Analysis completed",
+                    "vulnerabilities": [],
+                    "security_issues": [],
+                    "recommendations": [],
+                    "detailed_analysis": llm_response,
+                    "risk_score": 50
+                }
+            
+            # Create response
+            response = LLMAnalysisResponse(
+                analysis_id=analysis_id,
+                graph_id=request.graph_id,
+                execution_id=request.execution_id,
+                team_id=llm_client.team_id,  # Include team_id from LLM client
+                model=llm_client.model,  # Include model used
+                summary=analysis_data.get("summary", "Analysis completed"),
+                vulnerabilities=analysis_data.get("vulnerabilities", []),
+                security_issues=analysis_data.get("security_issues", []),
+                recommendations=analysis_data.get("recommendations", []),
+                detailed_analysis=analysis_data.get("detailed_analysis", llm_response),
+                risk_score=analysis_data.get("risk_score", 50)
+            )
+            
+            # Store analysis
+            self.llm_analyses[analysis_id] = response
+            
+            return response
+            
+        except Exception as e:
+            # Try to get team_id even on error
+            try:
+                llm_client = get_llm_client()
+                team_id = llm_client.team_id
+                model = llm_client.model
+            except:
+                team_id = None
+                model = None
+            
+            # Return error analysis
+            return LLMAnalysisResponse(
+                analysis_id=analysis_id,
+                graph_id=request.graph_id,
+                execution_id=request.execution_id,
+                team_id=team_id,
+                model=model,
+                summary=f"Analysis failed: {str(e)}",
+                vulnerabilities=[],
+                security_issues=[f"Error during analysis: {str(e)}"],
+                recommendations=["Retry analysis", "Check LLM configuration"],
+                detailed_analysis=f"An error occurred during LLM analysis: {str(e)}",
+                risk_score=None
+            )
+    
+    def get_llm_analysis(self, analysis_id: str) -> Optional[LLMAnalysisResponse]:
+        """Get a previously generated LLM analysis."""
+        return self.llm_analyses.get(analysis_id)
 
 
 # Global instance

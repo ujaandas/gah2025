@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -39,11 +40,24 @@ export default function GraphCanvas({
   onNodeDrag,
   onNodeDragStop,
 }: GraphCanvasProps) {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
+  const { theme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  
+  useEffect(() => {
+    console.log('[GraphCanvas] Nodes:', nodes);
+    console.log('[GraphCanvas] Edges:', edges);
+  }, [nodes, edges]);
+  
+  // Use resolvedTheme to get the actual theme (considering system preference)
+  // Default to light theme during SSR to prevent hydration mismatch
+  const isDark = mounted && (resolvedTheme === 'dark' || theme === 'dark');
 
   return (
-    <div className="w-full h-full absolute top-0 left-0">
+    <div className="w-full h-full absolute top-0 left-0" style={{ minHeight: '100vh' }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -55,12 +69,11 @@ export default function GraphCanvas({
         onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
         nodeTypes={nodeTypes}
-        fitView
         className={isDark ? "bg-zinc-950" : "bg-zinc-50"}
-        defaultViewport={{ x: 0, y: 0, zoom: 1 }}
         minZoom={0.1}
         maxZoom={4}
         attributionPosition="bottom-right"
+        proOptions={{ hideAttribution: true }}
         defaultEdgeOptions={{
           type: 'smoothstep',
           animated: false,

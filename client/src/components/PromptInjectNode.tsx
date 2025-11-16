@@ -23,12 +23,12 @@ export default function PromptInjectNode({ id, data }: NodeProps<PromptInjectNod
       {/* Node Content */}
       <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-950/50 dark:to-orange-950/50 border-2 border-red-400 dark:border-red-600 rounded-xl shadow-lg hover:shadow-xl transition-all p-4 min-w-[220px] backdrop-blur-sm">
         <div className="flex items-center gap-3 mb-2">
-          <div className="flex-shrink-0 p-2 bg-red-100 dark:bg-red-900/50 rounded-lg">
+          <div className="shrink-0 p-2 bg-red-100 dark:bg-red-900/50 rounded-lg">
             <span className="text-2xl">{data.icon}</span>
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 mb-0.5">
-              <AlertTriangle className="w-3 h-3 text-red-600 dark:text-red-400 flex-shrink-0" />
+              <AlertTriangle className="w-3 h-3 text-red-600 dark:text-red-400 shrink-0" />
               <span className="text-xs font-medium text-red-600 dark:text-red-400 uppercase tracking-wide">
                 Test Node
               </span>

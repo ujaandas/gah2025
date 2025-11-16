@@ -87,3 +87,29 @@ class ExportFormat(str, Enum):
     PDF = "pdf"
     HTML = "html"
 
+
+class LLMAnalysisRequest(BaseModel):
+    """Request for LLM-powered analysis of execution results."""
+    graph_id: str = Field(..., description="ID of the graph that was executed")
+    execution_id: str = Field(..., description="ID of the execution to analyze")
+    focus_areas: Optional[List[str]] = Field(
+        default=None,
+        description="Specific areas to focus on (e.g., 'security', 'performance', 'vulnerabilities')"
+    )
+
+
+class LLMAnalysisResponse(BaseModel):
+    """Response containing LLM-generated analysis."""
+    analysis_id: str = Field(..., description="Unique ID for this analysis")
+    graph_id: str
+    execution_id: str
+    team_id: Optional[str] = Field(None, description="Team ID used for LLM API")
+    model: Optional[str] = Field(None, description="Model used for analysis")
+    summary: str = Field(..., description="High-level summary of the execution")
+    vulnerabilities: List[str] = Field(default_factory=list, description="Detected vulnerabilities")
+    security_issues: List[str] = Field(default_factory=list, description="Security concerns")
+    recommendations: List[str] = Field(default_factory=list, description="Recommendations for improvement")
+    detailed_analysis: str = Field(..., description="Detailed analysis from LLM")
+    risk_score: Optional[int] = Field(None, description="Risk score from 0-100", ge=0, le=100)
+    generated_at: datetime = Field(default_factory=datetime.now)
+

@@ -31,11 +31,13 @@ export default function NodeDataPanel({
   const [nodeData, setNodeData] = useState<NodeData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isTestingNodeNotAdded, setIsTestingNodeNotAdded] = useState(false);
 
   useEffect(() => {
     if (isOpen && nodeId && graphId) {
       setIsLoading(true);
       setError(null);
+      setIsTestingNodeNotAdded(false);
       
       onFetchData(graphId, nodeId)
         .then((data) => {
@@ -44,7 +46,18 @@ export default function NodeDataPanel({
         })
         .catch((err) => {
           console.error('Failed to fetch node data:', err);
-          setError(err.message || 'Failed to fetch node data');
+          
+          // Check if this is a testing node that hasn't been added to the graph yet
+          const errorMessage = err.message || 'Failed to fetch node data';
+          if (errorMessage.includes('Node not found') && nodeId?.includes('-')) {
+            // This is likely a testing node that hasn't been dropped on an edge yet
+            setIsTestingNodeNotAdded(true);
+            setError(null);
+          } else {
+            setError(errorMessage);
+            setIsTestingNodeNotAdded(false);
+          }
+          
           setNodeData(null);
           setIsLoading(false);
         });
@@ -105,7 +118,38 @@ export default function NodeDataPanel({
             </div>
           )}
 
-          {error && (
+          {isTestingNodeNotAdded && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start">
+                <svg
+                  className="w-5 h-5 text-blue-600 mr-2 mt-0.5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <div>
+                  <h3 className="text-sm font-medium text-blue-800">Testing Node Not Added</h3>
+                  <p className="text-sm text-blue-700 mt-1">
+                    This testing node hasn't been added to the graph yet. 
+                    To add it and see its data after execution:
+                  </p>
+                  <ol className="text-sm text-blue-700 mt-2 ml-4 list-decimal space-y-1">
+                    <li>Drag this node from the canvas</li>
+                    <li>Drop it onto an edge in the graph</li>
+                    <li>Run the graph to execute it</li>
+                    <li>Click on it again to view its data</li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {error && !isTestingNodeNotAdded && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
               <div className="flex items-start">
                 <svg

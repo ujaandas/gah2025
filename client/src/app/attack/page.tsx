@@ -20,6 +20,7 @@ import PromptInjectNode from '@/components/PromptInjectNode';
 import GraphCanvas from '@/components/GraphCanvas';
 import GraphControls from '@/components/GraphControls';
 import NodeDataPanel from '@/components/NodeDataPanel';
+import AnalysisPanel from '@/components/AnalysisPanel';
 import { Button } from '@/components/ui/button';
 
 import { graphApiClient } from '@/lib/api/graphApi';
@@ -42,6 +43,11 @@ function AttackEditor() {
   const [targetUrl, setTargetUrl] = useState('');
   const [isUrlSet, setIsUrlSet] = useState(false);
   const [urlError, setUrlError] = useState<string | null>(null);
+  const [testPrompt, setTestPrompt] = useState('Hello, how can you help me?');
+  
+  // Analysis panel state
+  const [isAnalysisPanelOpen, setIsAnalysisPanelOpen] = useState(false);
+  const [lastExecutionId, setLastExecutionId] = useState<string | null>(null);
 
   // Custom hooks for managing state and behavior
   const {
@@ -57,7 +63,27 @@ function AttackEditor() {
     completedNodeIds,
     clearLogs,
     addLog,
+    lastExecutionId: hookLastExecutionId,
   } = useGraphEditor();
+
+  // Update execution ID when available from hook
+  useEffect(() => {
+    if (hookLastExecutionId && hookLastExecutionId !== lastExecutionId) {
+      setLastExecutionId(hookLastExecutionId);
+      // Automatically open analysis panel after execution completes
+      setIsAnalysisPanelOpen(true);
+    }
+  }, [hookLastExecutionId, lastExecutionId]);
+  
+  // Auto-fit view when nodes change
+  useEffect(() => {
+    if (nodes.length > 0) {
+      console.log('[Attack Page] Nodes changed, fitting view. Node count:', nodes.length);
+      setTimeout(() => {
+        fitView({ padding: 0.2, duration: 200 });
+      }, 100);
+    }
+  }, [nodes, fitView]);
 
   const {
     selectedNode,
@@ -230,10 +256,13 @@ function AttackEditor() {
       }
 
       const data = await response.json();
+      console.log('[Attack Page] API Response:', data);
       setCurrentGraphId(data.graph_id);
       
       // Convert API graph structure to React Flow format
       const { nodes: apiNodes, edges: apiEdges } = convertApiGraphToReactFlow(data.structure);
+      console.log('[Attack Page] Converted nodes:', JSON.stringify(apiNodes, null, 2));
+      console.log('[Attack Page] Converted edges:', JSON.stringify(apiEdges, null, 2));
       
       setNodes(apiNodes);
       setEdges(apiEdges);
@@ -245,10 +274,21 @@ function AttackEditor() {
         source: 'API'
       });
 
-      // Fit view after a short delay
+      // Fit view multiple times to ensure it works
       setTimeout(() => {
-        fitView({ padding: 0.2 });
+        console.log('[Attack Page] Calling fitView (attempt 1)');
+        fitView({ padding: 0.2, duration: 200 });
       }, 100);
+      
+      setTimeout(() => {
+        console.log('[Attack Page] Calling fitView (attempt 2)');
+        fitView({ padding: 0.2, duration: 200 });
+      }, 500);
+      
+      setTimeout(() => {
+        console.log('[Attack Page] Calling fitView (attempt 3)');
+        fitView({ padding: 0.2, duration: 200 });
+      }, 1000);
       
     } catch (error) {
       console.error('Failed to create attack graph:', error);
@@ -272,13 +312,13 @@ function AttackEditor() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[1000]"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[1000] p-4"
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="bg-white dark:bg-zinc-900 p-8 rounded-2xl min-w-[550px] shadow-2xl border border-zinc-200 dark:border-zinc-800"
+              className="bg-white dark:bg-zinc-900 p-8 rounded-2xl w-full max-w-[550px] shadow-2xl border border-zinc-200 dark:border-zinc-800"
             >
               <div className="flex items-center gap-3 mb-4">
                 <motion.div
@@ -366,7 +406,7 @@ function AttackEditor() {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[1000]"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[1000]"
         >
           <motion.div
             initial={{ scale: 0.9 }}
@@ -377,6 +417,16 @@ function AttackEditor() {
             <div className="text-zinc-900 dark:text-zinc-50 font-medium">Loading attack graph...</div>
           </motion.div>
         </motion.div>
+      )}
+
+      {/* Debug Info */}
+      {isUrlSet && (
+        <div className="absolute top-[280px] right-5 bg-yellow-100 dark:bg-yellow-900 p-3 rounded-lg shadow-lg z-50 text-sm">
+          <div>Nodes: {nodes.length}</div>
+          <div>Edges: {edges.length}</div>
+          <div>Graph ID: {currentGraphId?.substring(0, 8)}</div>
+          <div>Prompt: {testPrompt.substring(0, 20)}...</div>
+        </div>
       )}
 
       {/* React Flow Canvas */}
@@ -408,46 +458,97 @@ function AttackEditor() {
         onRun={() => {
           console.log('[Attack Page] TopBar onRun triggered');
           console.log('[Attack Page] Current graph ID:', currentGraphId);
-          handleRun(selectedNode, nodes, edges, currentGraphId);
+          console.log('[Attack Page] Test prompt:', testPrompt);
+          
+          // Pass the prompt in the initial state
+          handleRun(
+            selectedNode, 
+            nodes, 
+            edges, 
+            currentGraphId, 
+            (executionId) => {
+              console.log('[Attack Page] Execution completed with ID:', executionId);
+              setLastExecutionId(executionId);
+              setIsAnalysisPanelOpen(true);
+            },
+            { prompt: testPrompt } // Pass prompt to execution
+          );
         }} 
         isExecuting={isExecuting}
+        onViewAnalysis={() => setIsAnalysisPanelOpen(true)}
+        hasExecutionCompleted={!!lastExecutionId}
       />
 
-      {/* URL Display Badge */}
+      {/* URL Display Badge & Prompt Input */}
       {isUrlSet && (
-        <motion.div
-          initial={{ x: -100, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="absolute top-20 left-5 bg-white dark:bg-zinc-900 px-4 py-3 rounded-xl shadow-xl border border-zinc-200 dark:border-zinc-800 flex items-center gap-3 z-10 backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95"
-        >
-          <div className="p-2 bg-gradient-to-br from-red-500 to-orange-500 rounded-lg">
-            <span className="text-xl">🎯</span>
-          </div>
-          <div>
-            <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-0.5">
-              Target API
-            </div>
-            <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 max-w-[200px] truncate">
-              {targetUrl}
-            </div>
-          </div>
-          <Button
-            onClick={() => {
-              setIsUrlSet(false);
-              setTargetUrl('');
-              setCurrentGraphId(null);
-              setNodes([]);
-              setEdges([]);
-            }}
-            size="icon"
-            variant="ghost"
-            className="h-8 w-8 ml-2"
-            title="Change URL"
+        <>
+          <motion.div
+            initial={{ x: -100, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="absolute top-20 left-5 bg-white dark:bg-zinc-900 px-4 py-3 rounded-xl shadow-xl border border-zinc-200 dark:border-zinc-800 flex items-center gap-3 z-10 backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95"
           >
-            <X className="w-4 h-4" />
-          </Button>
-        </motion.div>
+            <div className="p-2 bg-gradient-to-br from-red-500 to-orange-500 rounded-lg">
+              <span className="text-xl">🎯</span>
+            </div>
+            <div>
+              <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-0.5">
+                Target API
+              </div>
+              <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 max-w-[200px] truncate">
+                {targetUrl}
+              </div>
+            </div>
+            <Button
+              onClick={() => {
+                setIsUrlSet(false);
+                setTargetUrl('');
+                setCurrentGraphId(null);
+                setNodes([]);
+                setEdges([]);
+              }}
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8 ml-2"
+              title="Change URL"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </motion.div>
+
+          {/* Test Prompt Input */}
+          <motion.div
+            initial={{ x: -100, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="absolute top-[140px] left-5 bg-white dark:bg-zinc-900 p-4 rounded-xl shadow-xl border border-zinc-200 dark:border-zinc-800 z-10 backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95 w-[450px]"
+          >
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-gradient-to-br from-violet-500 to-purple-500 rounded-lg">
+                <span className="text-xl">💬</span>
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs text-zinc-500 dark:text-zinc-400 mb-2 font-medium">
+                  Test Prompt
+                </label>
+                <textarea
+                  value={testPrompt}
+                  onChange={(e) => setTestPrompt(e.target.value)}
+                  placeholder="Enter your test prompt..."
+                  rows={3}
+                  className="w-full px-3 py-2 rounded-lg text-sm outline-none transition-all resize-none
+                    bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50
+                    placeholder-zinc-400 dark:placeholder-zinc-500
+                    border border-zinc-200 dark:border-zinc-700 
+                    focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20"
+                />
+                <div className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
+                  {testPrompt.length} characters
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </>
       )}
 
       {/* Node Directory Modal */}
@@ -473,6 +574,22 @@ function AttackEditor() {
         graphId={currentGraphId}
         onClose={() => setIsNodeDataPanelOpen(false)}
         onFetchData={handleFetchNodeData}
+      />
+
+      {/* Analysis Panel */}
+      <AnalysisPanel
+        isOpen={isAnalysisPanelOpen}
+        onClose={() => setIsAnalysisPanelOpen(false)}
+        graphId={currentGraphId}
+        executionId={lastExecutionId}
+        onAnalysisGenerated={(analysis) => {
+          console.log('[Attack Page] Analysis generated:', analysis);
+          addLog({
+            level: 'success',
+            message: `AI Analysis complete: Risk Score ${analysis.risk_score}/100`,
+            source: 'Analysis'
+          });
+        }}
       />
     </div>
   );

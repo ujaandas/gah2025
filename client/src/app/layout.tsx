@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import { ThemeProvider } from "@/components/theme-provider";
+import { HydrationHandler } from "@/components/HydrationHandler";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -21,7 +22,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} ${inter.className} antialiased`}>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              // Add loading class to prevent transitions during hydration
+              document.documentElement.classList.add('loading');
+            `,
+          }}
+        />
+      </head>
+      <body className={`${inter.variable} ${inter.className} antialiased loading`}>
+        <HydrationHandler />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

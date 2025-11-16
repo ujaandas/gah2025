@@ -47,6 +47,134 @@ class AttackState(TypedDict, total=False):
     error: str  # Any error messages
 
 
+# Global variable to store target URL (set during build)
+_TARGET_URL = "http://example.com/api"
+
+
+def start(state):
+    """Start node: Initialize with a default prompt."""
+    prompt = "Hello, how can you help me?"
+    print("\n" + "="*80)
+    print("🎯 ATTACK MODE - Initial Prompt")
+    print("="*80)
+    print(f"Initial prompt: {prompt}")
+    print(f"Target API: {_TARGET_URL}")
+    print("="*80 + "\n")
+    return {
+        "prompt": prompt,
+        "target_url": _TARGET_URL,
+        "status": "started"
+    }
+
+
+def validate(state):
+    """Validate node: Validates the prompt before sending to API."""
+    print("✅ VALIDATE - Checking prompt validity...")
+    
+    current_prompt = state.get("prompt", "")
+    original_prompt = state.get("original_prompt", "")
+    
+    # Check if prompt was modified by testing nodes
+    was_modified = bool(original_prompt and original_prompt != current_prompt)
+    
+    # Simple validation checks
+    is_valid = True
+    validation_message = "Prompt is valid"
+    
+    if not current_prompt:
+        is_valid = False
+        validation_message = "Error: Empty prompt"
+    elif len(current_prompt) > 10000:
+        is_valid = False
+        validation_message = "Error: Prompt too long, truncating"
+        current_prompt = current_prompt[:10000]
+    
+    if was_modified:
+        print(f"⚠️  WARNING: Prompt was modified by testing node!")
+        if original_prompt:
+            print(f"Original: {original_prompt[:100]}...")
+        print(f"Modified: {current_prompt[:100]}...")
+    
+    print(f"✓ Validation result: {validation_message}")
+    print(f"✓ Prompt length: {len(current_prompt)} characters\n")
+    
+    return {
+        "prompt": current_prompt,
+        "is_valid": is_valid,
+        "validation_message": validation_message
+    }
+
+
+def call_api(state):
+    """Call the external API with the prompt."""
+    print("\n" + "="*80)
+    print("🌐 API CALL - Calling External API")
+    print("="*80)
+    
+    prompt = state.get("prompt", "")
+    target = state.get("target_url", _TARGET_URL)
+    injection_applied = state.get("injection_applied", False)
+    fuzzing_applied = state.get("fuzzing_applied", False)
+    
+    print(f"Target URL: {target}")
+    print(f"Prompt: {prompt[:200]}...")
+    print(f"Injection applied: {injection_applied}")
+    print(f"Fuzzing applied: {fuzzing_applied}")
+    
+    try:
+        # Make the API call
+        # Support both GET and POST methods
+        # Try POST first with JSON body
+        with httpx.Client(timeout=30.0) as client:
+            try:
+                # Try POST with JSON
+                response = client.post(
+                    target,
+                    json={"prompt": prompt, "message": prompt, "query": prompt},
+                    headers={"Content-Type": "application/json"}
+                )
+            except Exception as post_error:
+                print(f"POST request failed, trying GET: {post_error}")
+                # Fall back to GET with query parameter
+                response = client.get(
+                    target,
+                    params={"prompt": prompt, "message": prompt, "query": prompt}
+                )
+            
+            status_code = response.status_code
+            print(f"✓ Status Code: {status_code}")
+            
+            # Try to get response as JSON, fall back to text
+            try:
+                api_response = response.json()
+                response_text = str(api_response)
+            except:
+                response_text = response.text
+            
+            print(f"✓ Response: {response_text[:500]}...")
+            print("="*80 + "\n")
+            
+            return {
+                "api_response": response_text,
+                "status_code": status_code,
+                "status": "completed",
+                "result": f"API call completed with status {status_code}"
+            }
+    
+    except Exception as e:
+        error_msg = str(e)
+        print(f"❌ Error calling API: {error_msg}")
+        print("="*80 + "\n")
+        
+        return {
+            "api_response": "",
+            "status_code": 0,
+            "status": "error",
+            "error": error_msg,
+            "result": f"API call failed: {error_msg}"
+        }
+
+
 def create_attack_graph(target_url: str) -> StateGraph:
     """
     Create an attack graph that targets a specific external API.
@@ -55,130 +183,13 @@ def create_attack_graph(target_url: str) -> StateGraph:
         target_url: The URL of the external API to test
         
     Returns:
-        A compiled StateGraph configured to attack the target
+        A StateGraph configured to attack the target
     """
+    # Store target URL in global variable for node functions to access
+    global _TARGET_URL
+    _TARGET_URL = target_url
+    
     graph = StateGraph(AttackState)
-    
-    def start(state):
-        """Start node: Initialize with a default prompt."""
-        prompt = "Hello, how can you help me?"
-        print("\n" + "="*80)
-        print("🎯 ATTACK MODE - Initial Prompt")
-        print("="*80)
-        print(f"Initial prompt: {prompt}")
-        print(f"Target API: {target_url}")
-        print("="*80 + "\n")
-        return {
-            "prompt": prompt,
-            "target_url": target_url,
-            "status": "started"
-        }
-    
-    def validate(state):
-        """Validate node: Validates the prompt before sending to API."""
-        print("✅ VALIDATE - Checking prompt validity...")
-        
-        current_prompt = state.get("prompt", "")
-        original_prompt = state.get("original_prompt", "")
-        
-        # Check if prompt was modified by testing nodes
-        was_modified = bool(original_prompt and original_prompt != current_prompt)
-        
-        # Simple validation checks
-        is_valid = True
-        validation_message = "Prompt is valid"
-        
-        if not current_prompt:
-            is_valid = False
-            validation_message = "Error: Empty prompt"
-        elif len(current_prompt) > 10000:
-            is_valid = False
-            validation_message = "Error: Prompt too long, truncating"
-            current_prompt = current_prompt[:10000]
-        
-        if was_modified:
-            print(f"⚠️  WARNING: Prompt was modified by testing node!")
-            if original_prompt:
-                print(f"Original: {original_prompt[:100]}...")
-            print(f"Modified: {current_prompt[:100]}...")
-        
-        print(f"✓ Validation result: {validation_message}")
-        print(f"✓ Prompt length: {len(current_prompt)} characters\n")
-        
-        return {
-            "prompt": current_prompt,
-            "is_valid": is_valid,
-            "validation_message": validation_message
-        }
-    
-    def call_api(state):
-        """Call the external API with the prompt."""
-        print("\n" + "="*80)
-        print("🌐 API CALL - Calling External API")
-        print("="*80)
-        
-        prompt = state.get("prompt", "")
-        target = state.get("target_url", target_url)
-        injection_applied = state.get("injection_applied", False)
-        fuzzing_applied = state.get("fuzzing_applied", False)
-        
-        print(f"Target URL: {target}")
-        print(f"Prompt: {prompt[:200]}...")
-        print(f"Injection applied: {injection_applied}")
-        print(f"Fuzzing applied: {fuzzing_applied}")
-        
-        try:
-            # Make the API call
-            # Support both GET and POST methods
-            # Try POST first with JSON body
-            with httpx.Client(timeout=30.0) as client:
-                try:
-                    # Try POST with JSON
-                    response = client.post(
-                        target,
-                        json={"prompt": prompt, "message": prompt, "query": prompt},
-                        headers={"Content-Type": "application/json"}
-                    )
-                except Exception as post_error:
-                    print(f"POST request failed, trying GET: {post_error}")
-                    # Fall back to GET with query parameter
-                    response = client.get(
-                        target,
-                        params={"prompt": prompt, "message": prompt, "query": prompt}
-                    )
-                
-                status_code = response.status_code
-                print(f"✓ Status Code: {status_code}")
-                
-                # Try to get response as JSON, fall back to text
-                try:
-                    api_response = response.json()
-                    response_text = str(api_response)
-                except:
-                    response_text = response.text
-                
-                print(f"✓ Response: {response_text[:500]}...")
-                print("="*80 + "\n")
-                
-                return {
-                    "api_response": response_text,
-                    "status_code": status_code,
-                    "status": "completed",
-                    "result": f"API call completed with status {status_code}"
-                }
-        
-        except Exception as e:
-            error_msg = str(e)
-            print(f"❌ Error calling API: {error_msg}")
-            print("="*80 + "\n")
-            
-            return {
-                "api_response": "",
-                "status_code": 0,
-                "status": "error",
-                "error": error_msg,
-                "result": f"API call failed: {error_msg}"
-            }
     
     # Add nodes to graph
     graph.add_node("start", start)
@@ -196,6 +207,9 @@ def create_attack_graph(target_url: str) -> StateGraph:
 
 def build(target_url: str = "http://example.com/api"):
     """Build and return the compiled attack graph."""
+    global _TARGET_URL
+    _TARGET_URL = target_url
+    
     print("\n" + "🎯 " + "="*76)
     print("🎯  ATTACK GRAPH: EXTERNAL API TESTING")
     print("🎯  " + "="*76)

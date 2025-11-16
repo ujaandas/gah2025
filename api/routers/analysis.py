@@ -8,6 +8,8 @@ from models.analysis import (
     TestSuiteResponse,
     VulnerabilityReport,
     ExportFormat,
+    LLMAnalysisRequest,
+    LLMAnalysisResponse,
 )
 from services.analysis_service import get_analysis_service
 from services.execution_service import get_execution_service
@@ -127,4 +129,61 @@ async def export_results(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to export results: {str(e)}"
         )
+
+
+@router.post("/llm-analysis", response_model=LLMAnalysisResponse)
+async def generate_llm_analysis(request: LLMAnalysisRequest):
+    """
+    Generate LLM-powered analysis of execution results.
+    
+    This endpoint uses an AI model to analyze the execution of a graph and provide:
+    - Summary of what happened
+    - Detected vulnerabilities and security issues
+    - Recommendations for improvement
+    - Detailed analysis
+    - Risk score (0-100)
+    """
+    try:
+        analysis_service = get_analysis_service()
+        execution_service = get_execution_service()
+        graph_service = get_graph_service()
+        
+        response = analysis_service.generate_llm_analysis(
+            request,
+            execution_service,
+            graph_service
+        )
+        return response
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate LLM analysis: {str(e)}"
+        )
+
+
+@router.get("/llm-analysis/{analysis_id}", response_model=LLMAnalysisResponse)
+async def get_llm_analysis(analysis_id: str):
+    """
+    Retrieve a previously generated LLM analysis.
+    """
+    analysis_service = get_analysis_service()
+    analysis = analysis_service.get_llm_analysis(analysis_id)
+    
+    if analysis is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Analysis not found: {analysis_id}"
+        )
+    
+    return analysis
 

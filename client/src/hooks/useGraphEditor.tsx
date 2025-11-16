@@ -21,6 +21,7 @@ export function useGraphEditor() {
   const [isExecuting, setIsExecuting] = useState(false);
   const [executingNodeIds, setExecutingNodeIds] = useState<string[]>([]);
   const [completedNodeIds, setCompletedNodeIds] = useState<string[]>([]);
+  const [lastExecutionId, setLastExecutionId] = useState<string | null>(null);
   const streamCleanupRef = useRef<(() => void) | null>(null);
 
   // Add a log entry
@@ -192,11 +193,14 @@ export function useGraphEditor() {
     selectedNode: Node | null,
     allNodes: Node[],
     allEdges: Edge[],
-    graphId: string | null
+    graphId: string | null,
+    onExecutionComplete?: (executionId: string) => void,
+    initialState?: Record<string, any>
   ) => {
     console.log('[useGraphEditor] handleRun called');
     console.log('[useGraphEditor] isExecuting:', isExecuting);
     console.log('[useGraphEditor] graphId:', graphId);
+    console.log('[useGraphEditor] initialState:', initialState);
     
     // Prevent concurrent executions
     if (isExecuting) {
@@ -227,6 +231,7 @@ export function useGraphEditor() {
     let currentLayer: string[] = [];
     let layerNumber = 0;
     let pendingNodeStarts: StreamExecutionEvent[] = [];
+    let executionIdFromStream: string | null = null;
 
     // Process events from queue with delay
     const processEventQueue = async () => {
@@ -430,6 +435,14 @@ export function useGraphEditor() {
               message: '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
               source: 'System',
             });
+            
+            // Store and callback with execution ID
+            if (executionIdFromStream) {
+              setLastExecutionId(executionIdFromStream);
+              if (onExecutionComplete) {
+                onExecutionComplete(executionIdFromStream);
+              }
+            }
             break;
 
           case 'error':
@@ -486,13 +499,19 @@ export function useGraphEditor() {
     // Start streaming execution
     const cleanup = graphApiClient.streamExecuteGraph(
       graphId,
-      { initial_state: {} },
+      { initial_state: initialState || {} },
       (event: StreamExecutionEvent) => {
         // Log raw event received from stream
         console.log(`%c[Stream] Event Received: %c${event.event_type}`, 
           'color: #6366f1; font-weight: bold;', 
           'color: #8b5cf6; font-weight: bold;');
         console.log('[useGraphEditor] Received event:', event);
+        
+        // Capture execution ID from first event
+        if (!executionIdFromStream && event.execution_id) {
+          executionIdFromStream = event.execution_id;
+          console.log('[Stream] Captured execution ID:', executionIdFromStream);
+        }
         
         // Add event to queue and start processing
         eventQueue.push(event);
@@ -586,6 +605,7 @@ export function useGraphEditor() {
     completedNodeIds,
     clearLogs,
     addLog,
+    lastExecutionId,
   };
 }
 
