@@ -7,7 +7,6 @@ import ReactFlow, {
   type Node,
   type Edge,
   type Connection,
-  MiniMap,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useTheme } from 'next-themes';
@@ -91,20 +90,6 @@ export default function GraphCanvas({
             !shadow-lg !rounded-xl [&>button]:!rounded-lg [&>button]:!transition-all
           `}
           showInteractive={false}
-        />
-        <MiniMap
-          className={`
-            ${isDark 
-              ? '!bg-zinc-900 !border-zinc-800' 
-              : '!bg-white !border-zinc-200'
-            }
-            !rounded-xl !shadow-lg !border !transition-colors
-          `}
-          nodeColor={(node) => {
-            if (node.type === 'promptInject') return isDark ? '#ef4444' : '#dc2626';
-            return isDark ? '#8b5cf6' : '#7c3aed';
-          }}
-          maskColor={isDark ? 'rgba(24, 24, 27, 0.6)' : 'rgba(250, 250, 250, 0.6)'}
         />
       </ReactFlow>
     </div>

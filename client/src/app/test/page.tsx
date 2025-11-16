@@ -301,7 +301,7 @@ function GraphEditor() {
   }, [handleNodeAddBase, setNodes]);
 
   return (
-    <div style={{ width: '100%', flex: 1, position: 'relative', minHeight: 0 }}>
+    <div className="relative flex-1 min-h-0 w-full">
       {/* Loading overlay */}
       {isLoadingGraph && (
         <div style={{
@@ -395,9 +395,11 @@ function GraphEditor() {
 
 export default function TestPage() {
   return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div className="flex-1 flex flex-col min-h-0 w-full">
       <ReactFlowProvider>
-        <GraphEditor />
+        <div className="flex-1 min-h-0 flex flex-col">
+          <GraphEditor />
+        </div>
       </ReactFlowProvider>
     </div>
   );
