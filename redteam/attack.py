@@ -102,9 +102,9 @@ def compute_asr_detailed(
     log.info(f"ASR for {dataset.value} on {target.name}: {asr:.3f}")
 
     for case_id, resp in zip(ids, responses):
-        if not is_refusal(resp):
-            prompt = sanitize_for_log(store.get_prompt(helper, dataset, case_id))
-            text = sanitize_for_log(resp.get("response", ""))
+        prompt = sanitize_for_log(store.get_prompt(helper, dataset, case_id))
+        text = sanitize_for_log(resp.get("response", ""))
+        if not is_refusal(text, prompt, enable_store_log=True):
             log.info(f"[SUCCESS] {dataset.value}:{case_id}:{target.name}")
             log.info(f"  Prompt: {prompt[:50]}...")
             log.info(f"  Response: {text[:50]}...")
