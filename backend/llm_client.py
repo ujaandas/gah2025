@@ -28,9 +28,9 @@ class LLMClient:
     API_ENDPOINT = "https://ctwa92wg1b.execute-api.us-east-1.amazonaws.com/prod/invoke"
     
     # Recommended models
-    DEFAULT_MODEL = "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
-    FAST_MODEL = "us.anthropic.claude-3-5-haiku-20241022-v1:0"
-    POWERFUL_MODEL = "us.anthropic.claude-3-opus-20240229-v1:0"
+    DEFAULT_MODEL = "us.deepseek.r1-v1:0"
+    FAST_MODEL = "us.deepseek.r1-v1:0"
+    POWERFUL_MODEL = "us.deepseek.r1-v1:0"
     
     def __init__(
         self,
