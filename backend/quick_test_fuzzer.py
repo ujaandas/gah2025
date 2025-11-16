@@ -1,10 +1,8 @@
-"""
-Quick test script for the FuzzerNode.
-
-This is a simple script to quickly verify the fuzzer is working.
-"""
+"""Quick smoke test for the template-based FuzzerNode."""
 
 import logging
+from pathlib import Path
+
 from testing_nodes.fuzzer_node import create_fuzzer_node
 
 # Set up logging
@@ -23,13 +21,15 @@ def quick_test():
     
     # Create a simple fuzzer
     logger.info("Creating fuzzer node...")
+    backend_dir = Path(__file__).resolve().parent
+    log_file = backend_dir / "fuzzer_logs" / "quick_test.json"
     fuzzer = create_fuzzer_node(
         node_id="quick_test",
         name="quick_test_fuzzer",
         fuzzing_strategies=["prompt_injection", "sql_injection", "xss_injection"],
         mutation_rate=1.0,
         save_logs=True,
-        log_file="fuzzer_logs/quick_test.json"
+        log_file=log_file
     )
     
     # Test input
@@ -50,7 +50,7 @@ def quick_test():
     print(f"\n📝 Original prompt: {test_state['prompt']}")
     print(f"\n🔥 Fuzzed prompt: {result['fuzzed_prompt']}")
     print(f"\n🎯 Strategy used: {result['fuzzed_prompt_strategy']}")
-    print(f"\n💾 Log saved to: fuzzer_logs/quick_test.json\n")
+    print(f"\n💾 Log saved to: {log_file.relative_to(Path.cwd())}\n")
     
     logger.info("="*70)
     logger.info("TEST COMPLETE")

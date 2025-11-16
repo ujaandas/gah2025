@@ -13,3 +13,6 @@ client/__pycache__
 .venv
 
 /api/__pycache__
+backend/fuzzer_logs/*.json
+!backend/fuzzer_logs/sample_output.json
+/fuzzer_logs/
