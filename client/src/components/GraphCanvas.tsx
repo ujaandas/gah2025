@@ -37,24 +37,25 @@ export default function GraphCanvas({
   onNodeDragStop,
 }: GraphCanvasProps) {
   return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onConnect={onConnect}
-      onNodeClick={onNodeClick}
-      onNodeDragStart={onNodeDragStart}
-      onNodeDrag={onNodeDrag}
-      onNodeDragStop={onNodeDragStop}
-      nodeTypes={nodeTypes}
-      fitView
-      className="bg-gray-50"
-      defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-      minZoom={0.1}
-      maxZoom={4}
-      attributionPosition="bottom-right"
-    >
+    <div style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        onNodeClick={onNodeClick}
+        onNodeDragStart={onNodeDragStart}
+        onNodeDrag={onNodeDrag}
+        onNodeDragStop={onNodeDragStop}
+        nodeTypes={nodeTypes}
+        fitView
+        className="bg-gray-50"
+        defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+        minZoom={0.1}
+        maxZoom={4}
+        attributionPosition="bottom-right"
+      >
       <Background
         variant={BackgroundVariant.Dots}
         gap={20}
@@ -66,6 +67,7 @@ export default function GraphCanvas({
         showInteractive={false}
       />
     </ReactFlow>
+    </div>
   );
 }
 
