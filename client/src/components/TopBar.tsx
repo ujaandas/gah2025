@@ -2,20 +2,33 @@
 
 interface TopBarProps {
   onRun: () => void;
+  isExecuting?: boolean;
 }
 
-export default function TopBar({ onRun }: TopBarProps) {
-
-    
+export default function TopBar({ onRun, isExecuting = false }: TopBarProps) {
   return (
     <div className="absolute top-5 right-5 z-50">
       <div className="bg-white rounded-lg shadow-md px-4 py-2 flex items-center gap-3 border border-gray-200">
         <button
           onClick={onRun}
-          className="bg-gray-800 hover:bg-gray-900 text-white px-5 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-2"
+          disabled={isExecuting}
+          className={`${
+            isExecuting 
+              ? 'bg-gray-400 cursor-not-allowed' 
+              : 'bg-gray-800 hover:bg-gray-900'
+          } text-white px-5 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-2`}
         >
-          <span>▶</span>
-          Run
+          {isExecuting ? (
+            <>
+              <span className="animate-spin">⚙️</span>
+              <span>Running...</span>
+            </>
+          ) : (
+            <>
+              <span>▶</span>
+              <span>Run</span>
+            </>
+          )}
         </button>
       </div>
     </div>

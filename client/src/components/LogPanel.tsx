@@ -1,8 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-
-interface Log {
+export interface Log {
   id: string;
   timestamp: Date;
   level: 'info' | 'warning' | 'error' | 'success';
@@ -10,117 +8,14 @@ interface Log {
   source?: string;
 }
 
-// Dummy log data
-const generateDummyLogs = (): Log[] => {
-  return [
-    {
-      id: '1',
-      timestamp: new Date(Date.now() - 5000),
-      level: 'info',
-      message: 'Supervisor node initialized successfully',
-      source: 'supervisor'
-    },
-    {
-      id: '2',
-      timestamp: new Date(Date.now() - 4500),
-      level: 'info',
-      message: 'Agent network connected: 4 agents online',
-      source: 'system'
-    },
-    {
-      id: '3',
-      timestamp: new Date(Date.now() - 4000),
-      level: 'success',
-      message: 'Excel agent executed task successfully',
-      source: 'Excel'
-    },
-    {
-      id: '4',
-      timestamp: new Date(Date.now() - 3500),
-      level: 'info',
-      message: 'Browser agent processing web request',
-      source: 'Browser'
-    },
-    {
-      id: '5',
-      timestamp: new Date(Date.now() - 3000),
-      level: 'warning',
-      message: 'High memory usage detected: 78%',
-      source: 'system'
-    },
-    {
-      id: '6',
-      timestamp: new Date(Date.now() - 2500),
-      level: 'success',
-      message: 'PowerPoint agent completed presentation generation',
-      source: 'PowerPoint'
-    },
-    {
-      id: '7',
-      timestamp: new Date(Date.now() - 2000),
-      level: 'info',
-      message: 'Research agent started data collection',
-      source: 'Research'
-    },
-    {
-      id: '8',
-      timestamp: new Date(Date.now() - 1500),
-      level: 'error',
-      message: 'Failed to connect to external API endpoint',
-      source: 'Browser'
-    },
-    {
-      id: '9',
-      timestamp: new Date(Date.now() - 1000),
-      level: 'info',
-      message: 'Supervisor routing task to Excel agent',
-      source: 'supervisor'
-    },
-    {
-      id: '10',
-      timestamp: new Date(Date.now() - 500),
-      level: 'success',
-      message: 'All agents ready for new tasks',
-      source: 'system'
-    }
-  ];
-};
-
 interface LogPanelProps {
   isOpen: boolean;
   onToggle: () => void;
+  logs: Log[];
+  onClearLogs: () => void;
 }
 
-export default function LogPanel({ isOpen, onToggle }: LogPanelProps) {
-  const [logs, setLogs] = useState<Log[]>([]);
-
-  useEffect(() => {
-    // Initialize with dummy logs
-    setLogs(generateDummyLogs());
-
-    // Simulate new logs coming in every 5 seconds
-    const interval = setInterval(() => {
-      const newLog: Log = {
-        id: Date.now().toString(),
-        timestamp: new Date(),
-        level: ['info', 'warning', 'error', 'success'][Math.floor(Math.random() * 4)] as Log['level'],
-        message: [
-          'Processing new task...',
-          'Agent communication established',
-          'Task completed successfully',
-          'Waiting for supervisor response',
-          'Resource allocation updated',
-          'Network latency detected'
-        ][Math.floor(Math.random() * 6)],
-        source: ['supervisor', 'Excel', 'PowerPoint', 'Browser', 'Research', 'system'][Math.floor(Math.random() * 6)]
-      };
-
-      setLogs((prevLogs) => [newLog, ...prevLogs].slice(0, 50)); // Keep last 50 logs
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, []);
-
+export default function LogPanel({ isOpen, onToggle, logs, onClearLogs }: LogPanelProps) {
   const getLevelColor = (level: Log['level']) => {
     switch (level) {
       case 'info':
@@ -245,7 +140,10 @@ export default function LogPanel({ isOpen, onToggle }: LogPanelProps) {
           <div className="bg-gray-50 p-3 border-t border-gray-200">
             <div className="flex items-center justify-between text-xs text-gray-600">
               <span>{logs.length} logs</span>
-              <button className="font-medium text-gray-800 hover:text-gray-900 transition-colors">
+              <button 
+                onClick={onClearLogs}
+                className="font-medium text-gray-800 hover:text-gray-900 transition-colors"
+              >
                 Clear All
               </button>
             </div>

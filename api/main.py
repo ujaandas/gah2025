@@ -1,39 +1,54 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI()
+from routers import (
+    graphs_router,
+    nodes_router,
+    testing_router,
+    executions_router,
+    analysis_router,
+)
+
+app = FastAPI(
+    title="LangGraph Testing Platform API",
+    description="API for testing and red-teaming LangGraph agent systems",
+    version="1.0.0",
+)
 
 # Add CORS middleware to allow requests from the frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Next.js default port
+    allow_origins=[
+        "http://localhost:3000",  # Next.js default port
+        "http://localhost:3001",
+        "http://127.0.0.1:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Include routers
+app.include_router(graphs_router)
+app.include_router(nodes_router)
+app.include_router(testing_router)
+app.include_router(executions_router)
+app.include_router(analysis_router)
+
+
 @app.get("/")
 async def root():
-    return {"message": "Hello World"}
-
-# route that receives the data to run the individual node
-@app.post("/graph")
-async def get_graph(request: Request):
-    # get data from request
-    data = await request.json()
-    print(data)
-    # get graph from data (should include the node name, input data and expected output)
-    node_name = data.get("node_name")
-    input_data = data.get("input_data")
-
-    # run graph
-    # TODO: Implement your graph logic here
-    result = f"Processed node '{node_name}' with input: {input_data}"
-
-    return {"message": "Graph", "result": result}
+    """Root endpoint with API information."""
+    return {
+        "message": "LangGraph Testing Platform API",
+        "version": "1.0.0",
+        "docs": "/docs",
+        "redoc": "/redoc",
+    }
 
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy"}
+    """Health check endpoint."""
+    return {"status": "healthy", "service": "langgraph-testing-api"}
 

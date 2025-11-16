@@ -1,0 +1,15 @@
+# FastAPI and server
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# Data validation
+pydantic==2.12.4
+pydantic-core==2.41.5
+
+# CORS and middleware
+python-jose[cryptography]==3.3.0
+
+# HTTP client for testing nodes
+httpx==0.28.1
+
