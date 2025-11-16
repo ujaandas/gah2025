@@ -339,7 +339,8 @@ function GraphEditor() {
           console.log('[Page] Current isExecuting state:', isExecuting);
           console.log('[Page] Number of nodes:', nodes.length);
           console.log('[Page] Number of edges:', edges.length);
-          handleRun(selectedNode, nodes, edges);
+          console.log('[Page] Current graph ID:', currentGraphId);
+          handleRun(selectedNode, nodes, edges, currentGraphId);
         }} 
         isExecuting={isExecuting}
       />

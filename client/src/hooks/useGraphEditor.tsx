@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import type { Node, Edge } from 'reactflow';
+import { graphApiClient, type StreamExecutionEvent } from '@/lib/api/graphApi';
 
 export interface ExecutionLog {
   id: string;
@@ -19,6 +20,7 @@ export function useGraphEditor() {
   const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
   const [isExecuting, setIsExecuting] = useState(false);
   const [executingNodeIds, setExecutingNodeIds] = useState<string[]>([]);
+  const streamCleanupRef = useRef<(() => void) | null>(null);
 
   // Add a log entry
   const addLog = useCallback((log: Omit<ExecutionLog, 'id' | 'timestamp'>) => {
@@ -33,6 +35,16 @@ export function useGraphEditor() {
   // Clear logs
   const clearLogs = useCallback(() => {
     setExecutionLogs([]);
+  }, []);
+
+  // Cleanup stream on unmount
+  useEffect(() => {
+    return () => {
+      if (streamCleanupRef.current) {
+        console.log('[useGraphEditor] Cleaning up stream on unmount');
+        streamCleanupRef.current();
+      }
+    };
   }, []);
 
   // Execution layers for supervisor pattern
@@ -174,16 +186,16 @@ export function useGraphEditor() {
     return getTopologicalExecutionLayers(nodes, edges, startNode, addLog);
   }, [addLog, getSupervisorExecutionLayers, getTopologicalExecutionLayers]);
 
-  // Handler for run button - Mock execution
+  // Handler for run button - Stream execution from backend
   const handleRun = useCallback(async (
     selectedNode: Node | null,
     allNodes: Node[],
-    allEdges: Edge[]
+    allEdges: Edge[],
+    graphId: string | null
   ) => {
     console.log('[useGraphEditor] handleRun called');
     console.log('[useGraphEditor] isExecuting:', isExecuting);
-    console.log('[useGraphEditor] allNodes:', allNodes);
-    console.log('[useGraphEditor] allEdges:', allEdges);
+    console.log('[useGraphEditor] graphId:', graphId);
     
     // Prevent concurrent executions
     if (isExecuting) {
@@ -192,212 +204,324 @@ export function useGraphEditor() {
       return;
     }
     
-    console.log('[useGraphEditor] Starting new execution...');
-
-    // Simulate node execution
-    const executeNode = async (node: Node): Promise<boolean> => {
-      const nodeName = node.data.label?.props?.children?.[1]?.props?.children || node.data.title || node.id;
-      
-      console.log(`[useGraphEditor] Executing node: ${nodeName} (${node.id})`);
-      
-      // Add to executing nodes
-      setExecutingNodeIds(prev => [...prev, node.id]);
-      
-      // Log start of execution
-      addLog({
-        level: 'info',
-        message: `Starting execution of node: ${nodeName}`,
-        source: nodeName,
-      });
-
-      // Simulate processing time (1-3 seconds)
-      const processingTime = Math.random() * 2000 + 1000;
-      await new Promise(resolve => setTimeout(resolve, processingTime));
-
-      // Random outcome (mostly success, occasional warnings)
-      const rand = Math.random();
-      
-      if (node.id === '__start__') {
-        addLog({
-          level: 'success',
-          message: `Graph execution started`,
-          source: nodeName,
-        });
-      } else if (node.id === '__end__') {
-        addLog({
-          level: 'success',
-          message: `Graph execution completed successfully`,
-          source: nodeName,
-        });
-      } else if (rand < 0.7) {
-        // Success case
-        const successMessages = [
-          `Processed data successfully`,
-          `Task completed without errors`,
-          `Output generated and validated`,
-          `All checks passed`,
-          `Execution successful`,
-        ];
-        addLog({
-          level: 'success',
-          message: successMessages[Math.floor(Math.random() * successMessages.length)],
-          source: nodeName,
-        });
-      } else if (rand < 0.9) {
-        // Warning case
-        const warningMessages = [
-          `Execution completed with minor warnings`,
-          `Performance threshold exceeded`,
-          `Memory usage higher than expected`,
-          `Non-critical validation failed`,
-        ];
-        addLog({
-          level: 'warning',
-          message: warningMessages[Math.floor(Math.random() * warningMessages.length)],
-          source: nodeName,
-        });
-      } else {
-        // Error case (rare, and we'll continue anyway for demo)
-        addLog({
-          level: 'error',
-          message: `Recoverable error occurred, continuing execution`,
-          source: nodeName,
-        });
-      }
-
-      // Remove from executing nodes
-      setExecutingNodeIds(prev => prev.filter(id => id !== node.id));
-      console.log(`[useGraphEditor] Completed execution of node: ${nodeName}`);
-      return true;
-    };
-
-    console.log('[useGraphEditor] Setting isExecuting to true');
-    setIsExecuting(true);
-    clearLogs();
-    
-    addLog({
-      level: 'info',
-      message: '========================================',
-      source: 'system',
-    });
-    addLog({
-      level: 'info',
-      message: 'Starting graph execution...',
-      source: 'system',
-    });
-    addLog({
-      level: 'info',
-      message: '========================================',
-      source: 'system',
-    });
-
-    console.log('[useGraphEditor] Getting execution layers...');
-    // Get execution layers
-    const executionLayers = getExecutionLayers(allNodes, allEdges);
-    
-    if (executionLayers.length === 0) {
-      console.error('[useGraphEditor] Failed to determine execution order');
-      addLog({ level: 'error', message: 'Failed to determine execution order', source: 'system' });
-      setIsExecuting(false);
+    if (!graphId) {
+      addLog({ level: 'error', message: 'No graph loaded. Please load a graph first.', source: 'system' });
       return;
     }
     
-    console.log('[useGraphEditor] Execution layers:', executionLayers);
-
-    const totalNodes = executionLayers.reduce((sum, layer) => sum + layer.length, 0);
-    addLog({
-      level: 'info',
-      message: `Execution plan: ${totalNodes} nodes in ${executionLayers.length} layers`,
-      source: 'system',
-    });
-
-    // Track supervisor execution count for better logging
-    let supervisorExecutionCount = 0;
+    console.log('%c╔════════════════════════════════════════════════════════════════╗', 'color: #3b82f6; font-weight: bold;');
+    console.log('%c║  🎯 RUN BUTTON CLICKED - Starting Graph Execution             ║', 'color: #3b82f6; font-weight: bold; font-size: 13px;');
+    console.log('%c║  Graph ID: ' + graphId?.substring(0, 30) + '...                    ║', 'color: #3b82f6;');
+    console.log('%c╚════════════════════════════════════════════════════════════════╝', 'color: #3b82f6; font-weight: bold;');
+    console.log('');
     
-    // Execute nodes layer by layer
-    for (let layerIndex = 0; layerIndex < executionLayers.length; layerIndex++) {
-      const layer = executionLayers[layerIndex];
-      console.log(`[useGraphEditor] Executing layer ${layerIndex + 1}/${executionLayers.length}:`, layer);
-      
-      if (layer.length === 1) {
-        // Single node in layer - execute sequentially
-        const nodeId = layer[0];
-        const node = allNodes.find(n => n.id === nodeId);
-        if (node) {
-          let nodeName = node.data.label?.props?.children?.[1]?.props?.children || node.data.title || node.id;
+    console.log('[useGraphEditor] Starting streaming execution...');
+    setIsExecuting(true);
+    clearLogs();
+
+    // Queue for events to process with delay
+    const eventQueue: StreamExecutionEvent[] = [];
+    let isProcessingQueue = false;
+    let currentLayer: string[] = [];
+    let layerNumber = 0;
+    let pendingNodeStarts: StreamExecutionEvent[] = [];
+
+    // Process events from queue with delay
+    const processEventQueue = async () => {
+      if (isProcessingQueue) return;
+      isProcessingQueue = true;
+
+      while (eventQueue.length > 0) {
+        const event = eventQueue.shift()!;
+        
+        // If this is a node_start, check if more are coming (concurrent execution)
+        if (event.event_type === 'node_start') {
+          pendingNodeStarts.push(event);
           
-          // Add context for supervisor re-execution
-          if (nodeId === 'supervisor') {
-            supervisorExecutionCount++;
-            if (supervisorExecutionCount === 1) {
-              nodeName += ' (routing tasks)';
-            } else if (supervisorExecutionCount === 2) {
-              nodeName += ' (collecting results)';
-            }
+          // Wait a tiny bit to see if more node_start events arrive (indicating concurrent execution)
+          await new Promise(resolve => setTimeout(resolve, 50));
+          
+          // Collect all pending node_start events
+          while (eventQueue.length > 0 && eventQueue[0].event_type === 'node_start') {
+            pendingNodeStarts.push(eventQueue.shift()!);
+            await new Promise(resolve => setTimeout(resolve, 10));
           }
           
+          // Now process all the collected node_start events as a single layer
+          if (pendingNodeStarts.length > 0) {
+            // This is a new layer
+            layerNumber++;
+            console.log('');
+            console.log(`%c┌─ Layer ${layerNumber} ─────────────────────────────────────────`, 'color: #8b5cf6; font-weight: bold;');
+            
+            addLog({
+              level: 'info',
+              message: '',
+              source: 'System',
+            });
+      addLog({
+        level: 'info',
+              message: `┌─ Layer ${layerNumber} ─────────────────────────────────`,
+              source: 'System',
+            });
+            
+            // Process all node starts in this layer
+            for (const startEvent of pendingNodeStarts) {
+              currentLayer.push(startEvent.node_id || '');
+              
+              if (startEvent.node_id) {
+                setExecutingNodeIds(prev => [...prev, startEvent.node_id!]);
+              }
+              
+              console.log(`%c│  ▶️  Running: %c${startEvent.node_name || startEvent.node_id}`, 'color: #8b5cf6;', 'color: #10b981; font-weight: bold;');
+              console.log(`%c│     Node ID: %c${startEvent.node_id}`, 'color: #8b5cf6;', 'color: #6b7280;');
+              console.log(`%c│     Timestamp: %c${new Date(startEvent.timestamp).toLocaleTimeString()}`, 'color: #8b5cf6;', 'color: #6b7280;');
+              
+        addLog({
+                level: 'info',
+                message: `│  ▶️  Running: ${startEvent.node_name || startEvent.node_id}`,
+                source: 'Execution',
+              });
+            }
+            
+            // Clear the buffer
+            pendingNodeStarts = [];
+            
+            // Add delay to see the nodes running
+            await new Promise(resolve => setTimeout(resolve, 4000));
+          }
+          
+          // Continue to process node_complete events
+          continue;
+        }
+        
+        // Handle different event types
+        switch (event.event_type) {
+          case 'start':
+            console.log('%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'color: #3b82f6; font-weight: bold;');
+            console.log('%c🚀 GRAPH EXECUTION STARTED', 'color: #3b82f6; font-weight: bold; font-size: 14px;');
+            console.log('%cExecution ID:', 'color: #3b82f6; font-weight: bold;', event.execution_id);
+            console.log('%cGraph ID:', 'color: #3b82f6; font-weight: bold;', event.graph_id);
+            console.log('%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'color: #3b82f6; font-weight: bold;');
+    
+    addLog({
+      level: 'info',
+              message: '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+              source: 'System',
+            });
+            addLog({
+              level: 'info',
+              message: '🚀 GRAPH EXECUTION STARTED',
+              source: 'System',
+            });
+            addLog({
+              level: 'info',
+              message: `Execution ID: ${event.execution_id}`,
+              source: 'System',
+    });
+    addLog({
+      level: 'info',
+              message: '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+              source: 'System',
+            });
+            layerNumber = 0;
+            break;
+
+          case 'node_start':
+            // This is now handled above in the buffering logic
+            break;
+
+          case 'node_complete':
+            if (event.node_id) {
+              setExecutingNodeIds(prev => prev.filter(id => id !== event.node_id));
+              currentLayer = currentLayer.filter(id => id !== event.node_id);
+            }
+            
+            const level = event.status === 'success' ? 'success' : 
+                         event.status === 'error' ? 'error' : 'info';
+            
+            const statusIcon = event.status === 'success' ? '✓' : 
+                              event.status === 'error' ? '✗' : '○';
+            
+            const statusColor = event.status === 'success' ? '#10b981' : 
+                               event.status === 'error' ? '#ef4444' : '#6b7280';
+            
+            let message = `│  ${statusIcon} ${event.node_name || event.node_id}`;
+            if (event.duration_ms) {
+              message += ` • ${event.duration_ms.toFixed(2)}ms`;
+            }
+            
+            console.log(`%c│  ${statusIcon} %c${event.node_name || event.node_id}`, 
+              'color: #8b5cf6;', 
+              `color: ${statusColor}; font-weight: bold;`);
+            if (event.duration_ms) {
+              console.log(`%c│     Duration: %c${event.duration_ms.toFixed(2)}ms`, 
+                'color: #8b5cf6;', 
+                'color: #f59e0b; font-weight: bold;');
+            }
+            console.log(`%c│     Status: %c${event.status}`, 
+              'color: #8b5cf6;', 
+              `color: ${statusColor};`);
+            
+            addLog({
+              level,
+              message,
+              source: 'Result',
+            });
+            
+            if (event.error) {
+              console.log(`%c│     ↳ Error: %c${event.error}`, 'color: #8b5cf6;', 'color: #ef4444; font-weight: bold;');
+              addLog({
+                level: 'error',
+                message: `│     ↳ Error: ${event.error}`,
+                source: 'Error',
+              });
+            }
+            
+            // If this was the last node in the layer, close the layer
+            if (currentLayer.length === 0) {
+              console.log(`%c└────────────────────────────────────────────────────────────────`, 'color: #8b5cf6; font-weight: bold;');
           addLog({
             level: 'info',
-            message: `→ Layer ${layerIndex + 1}/${executionLayers.length}: Executing ${nodeName}`,
-            source: 'system',
-          });
-          await executeNode(node);
-        }
-      } else {
-        // Multiple nodes in layer - execute concurrently
-        const nodeNames = layer
-          .map(id => {
-            const node = allNodes.find(n => n.id === id);
-            return node?.data.label?.props?.children?.[1]?.props?.children || node?.data.title || id;
-          })
-          .join(', ');
+                message: `└────────────────────────────────────────────`,
+                source: 'System',
+              });
+            }
+            break;
+
+          case 'complete':
+            setExecutingNodeIds([]);
+            
+            console.log('');
+            console.log('%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'color: #10b981; font-weight: bold;');
+            console.log('%c✅ GRAPH EXECUTION COMPLETED', 'color: #10b981; font-weight: bold; font-size: 14px;');
+            if (event.duration_ms) {
+              console.log('%c⏱️  Total Time: %c' + event.duration_ms.toFixed(2) + 'ms', 
+                'color: #10b981; font-weight: bold;', 
+                'color: #f59e0b; font-weight: bold;');
+            }
+            console.log('%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'color: #10b981; font-weight: bold;');
         
         addLog({
           level: 'info',
-          message: `→ Layer ${layerIndex + 1}/${executionLayers.length}: Executing ${layer.length} nodes concurrently [${nodeNames}]`,
-          source: 'system',
-        });
-
-        // Execute all nodes in this layer concurrently
-        const layerPromises = layer.map(nodeId => {
-          const node = allNodes.find(n => n.id === nodeId);
-          return node ? executeNode(node) : Promise.resolve(false);
-        });
-
-        await Promise.all(layerPromises);
+              message: '',
+              source: 'System',
+            });
+            addLog({
+              level: 'success',
+              message: '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+              source: 'System',
+            });
+            addLog({
+              level: 'success',
+              message: '✅ GRAPH EXECUTION COMPLETED',
+              source: 'System',
+            });
+            
+            if (event.duration_ms) {
+              addLog({
+                level: 'info',
+                message: `⏱️  Total Time: ${event.duration_ms.toFixed(2)}ms`,
+                source: 'System',
+              });
+            }
         
         addLog({
           level: 'success',
-          message: `✓ Layer ${layerIndex + 1} completed (${layer.length} nodes)`,
-          source: 'system',
-        });
-      }
-      
-      // Small delay between layers
-      if (layerIndex < executionLayers.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-    }
+              message: '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+              source: 'System',
+            });
+            break;
+
+          case 'error':
+            setExecutingNodeIds([]);
+            
+            console.log('');
+            console.log('%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'color: #ef4444; font-weight: bold;');
+            console.log('%c❌ GRAPH EXECUTION FAILED', 'color: #ef4444; font-weight: bold; font-size: 14px;');
+            console.log('%cError:', 'color: #ef4444; font-weight: bold;', event.message || 'Execution failed');
+            if (event.error) {
+              console.log('%cDetails:', 'color: #ef4444; font-weight: bold;', event.error);
+            }
+            console.log('%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'color: #ef4444; font-weight: bold;');
 
     addLog({
-      level: 'info',
-      message: '========================================',
-      source: 'system',
+              level: 'error',
+              message: '',
+              source: 'System',
+            });
+            addLog({
+              level: 'error',
+              message: '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+              source: 'System',
     });
     addLog({
-      level: 'success',
-      message: '✓ Graph execution completed!',
-      source: 'system',
+              level: 'error',
+              message: '❌ GRAPH EXECUTION FAILED',
+              source: 'System',
     });
     addLog({
-      level: 'info',
-      message: '========================================',
-      source: 'system',
-    });
+              level: 'error',
+              message: event.message || 'Execution failed',
+              source: 'Error',
+            });
+            if (event.error) {
+              addLog({
+                level: 'error',
+                message: `Details: ${event.error}`,
+                source: 'Error',
+              });
+            }
+            addLog({
+              level: 'error',
+              message: '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+              source: 'System',
+            });
+            break;
+        }
+      }
 
-    console.log('[useGraphEditor] Execution completed, setting isExecuting to false');
+      isProcessingQueue = false;
+    };
+
+    // Start streaming execution
+    const cleanup = graphApiClient.streamExecuteGraph(
+      graphId,
+      { initial_state: {} },
+      (event: StreamExecutionEvent) => {
+        // Log raw event received from stream
+        console.log(`%c[Stream] Event Received: %c${event.event_type}`, 
+          'color: #6366f1; font-weight: bold;', 
+          'color: #8b5cf6; font-weight: bold;');
+        console.log('[useGraphEditor] Received event:', event);
+        
+        // Add event to queue and start processing
+        eventQueue.push(event);
+        processEventQueue();
+      },
+      (error: Error) => {
+        console.error('[useGraphEditor] Stream error:', error);
+        setExecutingNodeIds([]);
+        addLog({
+          level: 'error',
+          message: `Execution failed: ${error.message}`,
+      source: 'system',
+    });
+        setIsExecuting(false);
+      },
+      () => {
+        console.log('[useGraphEditor] Stream completed');
+        console.log('%c╔════════════════════════════════════════════════════════════════╗', 'color: #6b7280; font-weight: bold;');
+        console.log('%c║  📡 Stream Closed - Connection Terminated                     ║', 'color: #6b7280; font-weight: bold;');
+        console.log('%c╚════════════════════════════════════════════════════════════════╝', 'color: #6b7280; font-weight: bold;');
+        console.log('');
     setIsExecuting(false);
-  }, [isExecuting, addLog, clearLogs, getExecutionLayers, getSupervisorExecutionLayers, getTopologicalExecutionLayers]);
+        streamCleanupRef.current = null;
+      }
+    );
+
+    streamCleanupRef.current = cleanup;
+  }, [isExecuting, addLog, clearLogs]);
 
   // Handler for adding nodes
   const handleNodeAdd = useCallback((

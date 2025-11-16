@@ -93,6 +93,26 @@ export interface TestingNodeAddResponse {
   message: string;
 }
 
+export interface GraphExecuteRequest {
+  initial_state?: Record<string, any>;
+  config?: Record<string, any>;
+}
+
+export interface StreamExecutionEvent {
+  event_type: 'start' | 'node_start' | 'node_complete' | 'complete' | 'error';
+  execution_id: string;
+  graph_id: string;
+  timestamp: string;
+  node_id?: string;
+  node_name?: string;
+  status?: string;
+  input_state?: Record<string, any>;
+  output_state?: Record<string, any>;
+  duration_ms?: number;
+  error?: string;
+  message?: string;
+}
+
 /**
  * Graph API Client
  */
@@ -228,6 +248,86 @@ export class GraphApiClient {
     }
 
     return response.json();
+  }
+
+  /**
+   * Execute a graph with streaming updates via Server-Sent Events
+   */
+  streamExecuteGraph(
+    graphId: string,
+    request: GraphExecuteRequest,
+    onEvent: (event: StreamExecutionEvent) => void,
+    onError?: (error: Error) => void,
+    onComplete?: () => void
+  ): () => void {
+    const url = `${this.baseUrl}/api/graphs/${graphId}/execute/stream`;
+    
+    // Use fetch for SSE instead of EventSource (more control over request)
+    const controller = new AbortController();
+    
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream',
+      },
+      body: JSON.stringify(request),
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+          throw new Error(error.detail || `Failed to execute graph: ${response.statusText}`);
+        }
+
+        if (!response.body) {
+          throw new Error('Response body is null');
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          
+          if (done) {
+            if (onComplete) onComplete();
+            break;
+          }
+
+          // Decode the chunk and add to buffer
+          buffer += decoder.decode(value, { stream: true });
+
+          // Process complete SSE messages
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = line.slice(6); // Remove 'data: ' prefix
+                if (data.trim()) {
+                  const event = JSON.parse(data) as StreamExecutionEvent;
+                  onEvent(event);
+                }
+              } catch (e) {
+                console.error('Failed to parse SSE event:', e, line);
+              }
+            }
+          }
+        }
+      })
+      .catch((error) => {
+        if (error.name !== 'AbortError' && onError) {
+          onError(error);
+        }
+      });
+
+    // Return cleanup function
+    return () => {
+      controller.abort();
+    };
   }
 }
 

@@ -1,7 +1,9 @@
 """Graph management endpoints."""
 
 from fastapi import APIRouter, HTTPException, status
+from fastapi.responses import StreamingResponse
 from typing import List
+import json
 
 from models.graph import (
     GraphLoadRequest,
@@ -91,6 +93,64 @@ async def execute_graph(graph_id: str, request: GraphExecuteRequest):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to execute graph: {str(e)}"
         )
+
+
+@router.post("/{graph_id}/execute/stream")
+async def stream_execute_graph(graph_id: str, request: GraphExecuteRequest):
+    """
+    Execute the entire graph with streaming updates via Server-Sent Events.
+    
+    Returns a stream of events:
+    - start: Execution started
+    - node_start: Node execution started
+    - node_complete: Node execution completed
+    - complete: Graph execution completed
+    - error: Error occurred
+    """
+    graph_service = get_graph_service()
+    execution_service = get_execution_service()
+    
+    # Verify graph exists
+    if graph_id not in graph_service.graphs:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Graph not found: {graph_id}"
+        )
+    
+    async def event_generator():
+        """Generate Server-Sent Events."""
+        try:
+            for event in execution_service.stream_full_graph_execution(
+                graph_id,
+                request,
+                graph_service
+            ):
+                # Convert event to dict and then to JSON
+                event_dict = event.dict()
+                # Convert datetime to ISO format string
+                if 'timestamp' in event_dict and event_dict['timestamp']:
+                    event_dict['timestamp'] = event_dict['timestamp'].isoformat()
+                
+                # Format as SSE
+                yield f"data: {json.dumps(event_dict)}\n\n"
+        except Exception as e:
+            # Send error event
+            error_event = {
+                "event_type": "error",
+                "error": str(e),
+                "message": f"Stream error: {str(e)}"
+            }
+            yield f"data: {json.dumps(error_event)}\n\n"
+    
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Disable nginx buffering
+        }
+    )
 
 
 @router.delete("/{graph_id}", status_code=status.HTTP_204_NO_CONTENT)

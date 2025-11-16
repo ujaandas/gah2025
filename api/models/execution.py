@@ -89,3 +89,18 @@ class ExecutionDetailsResponse(BaseModel):
     success: bool
     error: Optional[str] = None
 
+
+class StreamExecutionEvent(BaseModel):
+    """Event sent during streaming execution."""
+    event_type: str = Field(..., description="Type of event: start, node_start, node_complete, complete, error")
+    execution_id: str
+    graph_id: str
+    timestamp: datetime
+    node_id: Optional[str] = None
+    node_name: Optional[str] = None
+    status: Optional[str] = None
+    input_state: Optional[Dict[str, Any]] = None
+    output_state: Optional[Dict[str, Any]] = None
+    duration_ms: Optional[float] = None
+    error: Optional[str] = None
+    message: Optional[str] = None

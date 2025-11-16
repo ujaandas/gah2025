@@ -15,6 +15,7 @@ from models.execution import (
     ExecutionDetailsResponse,
     MockStateRequest,
     MockStateResponse,
+    StreamExecutionEvent,
 )
 from models.graph import GraphExecuteRequest, GraphExecuteResponse
 
@@ -358,6 +359,225 @@ class ExecutionService:
             node_id=request.node_id,
             state=request.state,
             message=f"State mocked for node {request.node_id}",
+        )
+
+    def stream_full_graph_execution(
+        self,
+        graph_id: str,
+        request: GraphExecuteRequest,
+        graph_service
+    ):
+        """Stream execution events for the entire graph with concurrent execution."""
+        import asyncio
+        from typing import Set
+        
+        execution_id = str(uuid.uuid4())
+        start_time = time.time()
+        now = datetime.now()
+
+        # Get the graph
+        graph = graph_service.get_graph_instance(graph_id)
+        if graph is None:
+            yield StreamExecutionEvent(
+                event_type="error",
+                execution_id=execution_id,
+                graph_id=graph_id,
+                timestamp=datetime.now(),
+                error=f"Graph not found: {graph_id}",
+                message="Graph not found",
+            )
+            return
+
+        # Set initial state
+        graph.state = request.initial_state.copy()
+
+        # Send start event
+        yield StreamExecutionEvent(
+            event_type="start",
+            execution_id=execution_id,
+            graph_id=graph_id,
+            timestamp=now,
+            message="Graph execution started",
+            input_state=request.initial_state,
+        )
+
+        # Execute nodes and stream events
+        execution_history = []
+        status = "success"
+        
+        try:
+            # Build dependency graph from edges
+            node_ids = set(graph.nodes.keys())
+            dependencies = {node_id: set() for node_id in node_ids}
+            dependents = {node_id: set() for node_id in node_ids}
+            
+            for edge in graph.edges:
+                if edge.source in node_ids and edge.target in node_ids:
+                    dependencies[edge.target].add(edge.source)
+                    dependents[edge.source].add(edge.target)
+            
+            # Find nodes that can start (no dependencies or only __start__)
+            ready_nodes = set()
+            for node_id in node_ids:
+                node = graph.nodes[node_id]
+                # Skip nodes without data
+                if node.data is None:
+                    continue
+                deps = dependencies[node_id]
+                # Node is ready if it has no dependencies or only depends on __start__
+                if not deps or deps == {'__start__'}:
+                    ready_nodes.add(node_id)
+            
+            completed_nodes: Set[str] = set()
+            completed_nodes.add('__start__')  # Mark start as completed
+            
+            # Execute nodes layer by layer
+            while ready_nodes:
+                # Get current layer of nodes to execute
+                current_layer = list(ready_nodes)
+                ready_nodes.clear()
+                
+                # Execute all nodes in current layer concurrently
+                layer_events = []
+                
+                for node_id in current_layer:
+                    node = graph.nodes[node_id]
+                    node_start_time = time.time()
+                    
+                    # Send node start event
+                    yield StreamExecutionEvent(
+                        event_type="node_start",
+                        execution_id=execution_id,
+                        graph_id=graph_id,
+                        timestamp=datetime.now(),
+                        node_id=node_id,
+                        node_name=node.name,
+                        input_state=graph.state.copy(),
+                        message=f"Starting execution of node: {node.name}",
+                    )
+                    
+                    try:
+                        # Execute the node
+                        output_state = node.execute(graph.state)
+                        graph.state.update(output_state)
+                        
+                        node_duration = (time.time() - node_start_time) * 1000
+                        
+                        # Send node complete event
+                        yield StreamExecutionEvent(
+                            event_type="node_complete",
+                            execution_id=execution_id,
+                            graph_id=graph_id,
+                            timestamp=datetime.now(),
+                            node_id=node_id,
+                            node_name=node.name,
+                            status="success",
+                            input_state=output_state,
+                            output_state=output_state,
+                            duration_ms=node_duration,
+                            message=f"Node {node.name} executed successfully",
+                        )
+                        
+                        execution_history.append({
+                            "node_id": node_id,
+                            "node_name": node.name,
+                            "status": "success",
+                            "duration_ms": node_duration,
+                        })
+                        
+                        completed_nodes.add(node_id)
+                        
+                    except Exception as e:
+                        node_duration = (time.time() - node_start_time) * 1000
+                        error_msg = str(e)
+                        
+                        # Send node error event
+                        yield StreamExecutionEvent(
+                            event_type="node_complete",
+                            execution_id=execution_id,
+                            graph_id=graph_id,
+                            timestamp=datetime.now(),
+                            node_id=node_id,
+                            node_name=node.name,
+                            status="error",
+                            duration_ms=node_duration,
+                            error=error_msg,
+                            message=f"Error executing node {node.name}: {error_msg}",
+                        )
+                        
+                        execution_history.append({
+                            "node_id": node_id,
+                            "node_name": node.name,
+                            "status": "error",
+                            "duration_ms": node_duration,
+                            "error": error_msg,
+                        })
+                        
+                        status = "error"
+                        completed_nodes.add(node_id)  # Mark as completed even if failed
+                
+                # Find next layer of nodes that are now ready
+                for node_id in node_ids:
+                    if node_id in completed_nodes:
+                        continue
+                    node = graph.nodes[node_id]
+                    if node.data is None:
+                        continue
+                    # Check if all dependencies are completed
+                    deps = dependencies[node_id]
+                    if deps.issubset(completed_nodes):
+                        ready_nodes.add(node_id)
+            
+            final_state = graph.state
+            
+        except Exception as e:
+            status = "error"
+            final_state = graph.state
+            execution_history.append({
+                "error": str(e),
+                "partial_state": final_state,
+            })
+            
+            # Send error event
+            yield StreamExecutionEvent(
+                event_type="error",
+                execution_id=execution_id,
+                graph_id=graph_id,
+                timestamp=datetime.now(),
+                error=str(e),
+                message=f"Graph execution failed: {str(e)}",
+            )
+
+        duration_ms = (time.time() - start_time) * 1000
+
+        # Store execution
+        self.executions[execution_id] = {
+            "execution_id": execution_id,
+            "graph_id": graph_id,
+            "execution_type": "full",
+            "status": status,
+            "initial_state": request.initial_state,
+            "final_state": final_state,
+            "execution_history": execution_history,
+            "duration_ms": duration_ms,
+            "started_at": now,
+            "completed_at": datetime.now(),
+            "success": status == "success",
+        }
+
+        # Update graph last executed
+        graph_service.update_last_executed(graph_id)
+
+        # Send complete event
+        yield StreamExecutionEvent(
+            event_type="complete",
+            execution_id=execution_id,
+            graph_id=graph_id,
+            timestamp=datetime.now(),
+            status=status,
+            output_state=final_state,
+            duration_ms=duration_ms,
+            message="Graph execution completed",
         )
 
 
